@@ -616,6 +616,11 @@ function mergeCells(cells) {
   }
 }
 
+function mergeTimerForMass(mass) {
+  // 질량 비례 타이머 — 최소 120, 최대 600
+  return Math.min(600, Math.max(120, 120 + mass * 0.8));
+}
+
 // ── Split ─────────────────────────────────────────────
 function splitCells(cells, tx, ty) {
   let newCells = [];
@@ -626,12 +631,12 @@ function splitCells(cells, tx, ty) {
     let d = Math.hypot(dx,dy)||1;
     let half = c.mass/2;
     c.mass = half; c.r = massToR(half);
-    // 원래 세포는 반대 방향으로 살짝 밀림
     c.vx = -(dx/d)*6; c.vy = -(dy/d)*6;
     let nc = new Cell(c.x, c.y, half, c.color, c.name);
     nc.vx = (dx/d)*35; nc.vy = (dy/d)*35;
-    nc.mergeTimer = 120;
-    c.mergeTimer = 120;
+    let mt = mergeTimerForMass(half);
+    nc.mergeTimer = mt;
+    c.mergeTimer = mt;
     newCells.push(nc);
   }
   cells.push(...newCells);
@@ -700,41 +705,40 @@ function virusCheck(cells) {
       if (c.mass < rToMass(v.r) * 1.1) continue;
       if (dist(c, v) < c.r + v.r * 0.3) {
         let virusIdx = viruses.indexOf(v);
+        // 질량 흡수는 항상 (MAX_CELLS 상관없이)
         c.mass += rToMass(v.r);
+        c.r = massToR(c.mass);
         viruses.splice(virusIdx, 1);
         setTimeout(() => spawnVirus(), 10000);
         if (cells === player) sfx.virusHit();
 
-        // 현재 총 셀 수 기준으로 추가 분열 가능 수 계산
+        // 분열은 MAX_CELLS 여유 있을 때만
         let maxNew = MAX_CELLS - cells.length;
-        if (maxNew <= 0) break;
+        if (maxNew > 0) {
+          let maxPieces = Math.floor(c.mass / MIN_CELL_MASS);
+          let pieces = Math.min(maxNew + 1, maxPieces);
+          pieces = Math.max(2, pieces);
 
-        // 이 셀이 분열할 수 있는 최대 조각 수
-        let maxPieces = Math.floor(c.mass / MIN_CELL_MASS);
-        let pieces = Math.min(maxNew + 1, maxPieces); // +1 포함 자기 자신
-        pieces = Math.max(2, pieces);
+          let eachMass = c.mass / pieces;
+          let angleStart = Math.random() * Math.PI * 2;
+          let mt = mergeTimerForMass(eachMass);
+          c.mass = eachMass;
+          c.r = massToR(eachMass);
+          c.mergeTimer = mt;
 
-        let eachMass = c.mass / pieces;
-        let angleStart = Math.random() * Math.PI * 2;
-
-        // 기존 셀 크기 조정
-        c.mass = eachMass;
-        c.r = massToR(eachMass);
-        c.mergeTimer = 240;
-
-        // 새 조각들 생성
-        for (let p = 1; p < pieces; p++) {
-          let angle = angleStart + (p / pieces) * Math.PI * 2;
-          let nc = new Cell(c.x, c.y, eachMass, c.color, c.name);
-          nc.vx = Math.cos(angle) * 18;
-          nc.vy = Math.sin(angle) * 18;
-          nc.mergeTimer = 240;
-          cells.push(nc);
+          for (let p = 1; p < pieces; p++) {
+            let angle = angleStart + (p / pieces) * Math.PI * 2;
+            let nc = new Cell(c.x, c.y, eachMass, c.color, c.name);
+            nc.vx = Math.cos(angle) * 18;
+            nc.vy = Math.sin(angle) * 18;
+            nc.mergeTimer = mt;
+            cells.push(nc);
+          }
         }
         break;
       }
     }
-    if (!viruses.includes(v)) break; // 가시 제거됐으면 루프 종료
+    if (!viruses.includes(v)) break;
   }
 }
 
