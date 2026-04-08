@@ -1441,10 +1441,14 @@ joystickZone.addEventListener('touchend', e => {
 // 조이스틱 → mouse 포지션 변환 (매 프레임 호출)
 function applyJoystick() {
   if (!joyActive || !player || player.length === 0) return;
-  const RANGE = 300; // 화면 중심에서 얼마나 멀리 타겟 잡을지
+  const RANGE = 300;
   let cx = W() / 2, cy = H() / 2;
-  mouse.x = cx + joyDelta.x * RANGE;
-  mouse.y = cy + joyDelta.y * RANGE;
+  // 제곱 커브 적용 — 중앙 근처 느리게, 끝으로 갈수록 빠르게
+  let mag = Math.hypot(joyDelta.x, joyDelta.y); // 0~1
+  let curved = mag * mag; // 제곱으로 완만한 가속
+  let scale = mag > 0 ? curved / mag : 0;
+  mouse.x = cx + joyDelta.x * scale * RANGE;
+  mouse.y = cy + joyDelta.y * scale * RANGE;
 }
 
 // 분열 / 발사 버튼
