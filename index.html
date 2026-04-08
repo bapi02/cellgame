@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cell.io</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #1f1f1f; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+  canvas { display: block; cursor: none; }
+
+  #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  #leaderboard {
+    position: fixed; top: 20px; right: 20px;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 12px 18px; min-width: 160px;
+    color: #fff; font-size: 13px;
+  }
+  #leaderboard h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; margin-bottom: 10px; }
+  #leaderboard .entry { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
+  #leaderboard .entry.me { color: #7effa0; font-weight: 700; }
+  #leaderboard .rank { color: #555; width: 14px; }
+
+  #score {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.7); font-size: 15px; letter-spacing: 1px;
+  }
+
+  #team-indicator {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: none; gap: 10px; align-items: center;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 8px 18px;
+    pointer-events: none;
+  }
+  #team-indicator .t-chip {
+    padding: 4px 12px; border-radius: 20px; font-size: 13px;
+    font-weight: 700; color: #fff; opacity: 0.5; transition: opacity 0.3s;
+  }
+  #team-indicator .t-chip.alive { opacity: 1; }
+  #team-indicator .t-chip.me { outline: 2px solid #fff; }
+
+  #myinfo {
+    position: fixed; top: 20px; left: 20px;
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 16px;
+    color: #fff; font-size: 14px; pointer-events: none;
+  }
+  #myinfo .cell-preview {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  }
+  #myinfo .info-text { display: flex; flex-direction: column; gap: 2px; }
+  #myinfo .info-name { font-weight: 700; font-size: 15px; }
+  #myinfo .info-rank { color: #aaa; font-size: 12px; }
+  #myinfo .info-rank span { color: #7effa0; font-weight: 700; }
+
+  #timer {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 2px;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 8px 22px;
+  }
+  #timer.danger { color: #ff6b6b; }
+
+  #result {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.88); backdrop-filter: blur(12px); z-index: 100;
+    flex-direction: column; gap: 14px;
+  }
+  #result h2 { font-size: 42px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+  #result .result-list { min-width: 280px; }
+  #result .result-entry {
+    display: flex; justify-content: space-between; gap: 20px;
+    padding: 8px 14px; border-radius: 8px; font-size: 15px; color: #fff;
+  }
+  #result .result-entry.gold { background: rgba(255,215,0,0.2); color: #ffd700; font-weight: 700; }
+  #result .result-entry.silver { background: rgba(192,192,192,0.15); color: #c0c0c0; font-weight: 700; }
+  #result .result-entry.bronze { background: rgba(205,127,50,0.15); color: #cd7f32; font-weight: 700; }
+  #result .result-entry.me { outline: 1px solid #7effa0; }
+  #result button {
+    background: #7effa0; color: #000; font-size: 16px; font-weight: 700;
+    border: none; border-radius: 8px; padding: 12px 36px; cursor: pointer;
+    pointer-events: all; margin-top: 10px;
+  }
+
+  #minimap {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 140px; height: 140px;
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; overflow: hidden;
+  }
+  #minimap canvas { width: 100%; height: 100%; }
+
+  @media (pointer: coarse) {
+    /* 모바일: 미니맵 왼쪽 하단 */
+    #minimap { right: auto; left: 20px; bottom: 20px; width: 120px; height: 120px; }
+    /* 팀 인디케이터 상단으로 */
+    #team-indicator { bottom: auto; top: 80px; transform: translateX(-50%); }
+    /* 점수 상단으로 */
+    #score { bottom: auto; top: 130px; }
+  }
+
+  #menu {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 100;
+    flex-direction: column; gap: 20px;
+  }
+  #menu h1 { font-size: 64px; font-weight: 900; color: #fff; letter-spacing: -2px; }
+  #menu h1 span { color: #7effa0; }
+  #menu input {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px; padding: 14px 22px; color: #fff; font-size: 18px;
+    outline: none; width: 260px; text-align: center;
+  }
+  #menu input::placeholder { color: rgba(255,255,255,0.3); }
+  #menu button {
+    background: #7effa0; color: #000; font-size: 17px; font-weight: 700;
+    border: none; border-radius: 8px; padding: 14px 40px; cursor: pointer;
+    pointer-events: all; transition: transform 0.1s, background 0.15s;
+  }
+  #menu button:hover { background: #a0ffbc; transform: scale(1.04); }
+  #menu .hint { color: rgba(255,255,255,0.3); font-size: 13px; text-align: center; line-height: 1.7; }
+
+  #dead {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100;
+    flex-direction: column; gap: 16px;
+  }
+  #dead h2 { font-size: 48px; color: #ff6b6b; font-weight: 900; }
+  #dead p { color: #aaa; font-size: 16px; }
+  #dead button {
+    background: #7effa0; color: #000; font-size: 16px; font-weight: 700;
+    border: none; border-radius: 8px; padding: 12px 36px; cursor: pointer;
+    pointer-events: all; margin-top: 8px;
+  }
+
+  /* ── 모바일 컨트롤 ── */
+  #mobile-controls {
+    display: none;
+    position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  }
+
+  /* 조이스틱 — 좌측 하단 고정 */
+  #joystick-zone {
+    position: absolute; left: 0; bottom: 0;
+    width: 50%; height: 55%;
+    pointer-events: all;
+  }
+  #joystick-base {
+    position: absolute;
+    left: 100px; bottom: 100px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.18);
+    transform: translate(-50%, 50%);
+    pointer-events: none;
+  }
+  #joystick-knob {
+    position: absolute;
+    left: 100px; bottom: 100px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    border: 2px solid rgba(255,255,255,0.8);
+    transform: translate(-50%, 50%);
+    pointer-events: none;
+    box-shadow: 0 0 12px rgba(255,255,255,0.25);
+  }
+
+  /* 우측 버튼 — 가로 배치 */
+  #btn-zone {
+    position: absolute; right: 24px; bottom: 44px;
+    display: flex; flex-direction: row; gap: 16px; align-items: center;
+    pointer-events: all;
+  }
+  .ctrl-btn {
+    width: 80px; height: 80px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; text-align: center;
+    user-select: none; -webkit-user-select: none;
+    backdrop-filter: blur(4px);
+  }
+  .ctrl-btn:active { transform: scale(0.88); opacity: 0.75; }
+  #btn-split { background: rgba(126,255,160,0.22); border-color: #7effa0; }
+  #btn-eject { background: rgba(84,160,255,0.22);  border-color: #54a0ff; }
+
+  @media (pointer: coarse) {
+    #mobile-controls { display: block; }
+    canvas { cursor: default; }
+    #leaderboard { top: 12px; right: 12px; padding: 8px 12px; min-width: 110px; font-size: 11px; }
+    #leaderboard h3 { font-size: 9px; margin-bottom: 5px; }
+    #leaderboard .entry { padding: 2px 0; gap: 8px; }
+    #myinfo { top: 12px; left: 12px; padding: 7px 12px; }
+    #myinfo .info-name { font-size: 13px; }
+    #timer { font-size: 18px; padding: 6px 16px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div id="myinfo" style="display:none">
+    <canvas class="cell-preview" id="cell-preview" width="36" height="36"></canvas>
+    <div class="info-text">
+      <div class="info-name" id="info-name">Player</div>
+      <div class="info-rank">순위 <span id="info-rank">-</span></div>
+    </div>
+  </div>
+  <div id="leaderboard"><h3>Leaderboard</h3><div id="lb-list"></div></div>
+  <div id="timer">12:00</div>
+</div>
+
+<div id="mobile-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base"></div>
+    <div id="joystick-knob"></div>
+  </div>
+  <div id="btn-zone">
+    <div class="ctrl-btn" id="btn-eject">발사<br>W</div>
+    <div class="ctrl-btn" id="btn-split">분열<br>SPACE</div>
+  </div>
+</div>
+
+<div id="menu">
+  <h1>Cell<span>.io</span></h1>
+  <input id="name-input" type="text" maxlength="24" placeholder="닉네임 입력... [FF7777]색상코드 가능" />
+  <div style="display:flex;gap:12px;">
+    <button id="play-btn">개인전</button>
+    <button id="team-btn" style="background:#54a0ff;">팀전</button>
+  </div>
+  <div class="hint">
+    🖥 마우스 이동 · 스페이스: 분열 · W: 먹이 발사<br>
+    📱 조이스틱 이동 · 버튼으로 분열/발사<br>
+    [FF7777]닉네임 형식으로 색상 지정 가능
+  </div>
+</div>
+
+<div id="result">
+  <h2>🏆 결과</h2>
+  <div class="result-list" id="result-list"></div>
+  <button id="result-btn">다시하기</button>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const mm = document.getElementById('mm');
+const mctx = mm ? mm.getContext('2d') : null;
+if (mm) { mm.width = 160; mm.height = 160; }
+
+const W = () => canvas.width;
+const H = () => canvas.height;
+
+// World
+const WORLD = 6000;
+const FOOD_COUNT = 800;
+const VIRUS_COUNT = 30;
+const BOT_COUNT = 24; // 팀전 최대 24봇 + 플레이어 1
+
+// 팀 설정
+const TEAM_COLORS = ['#ff6b6b','#54a0ff','#2ed573','#feca57','#ff9ff3'];
+const TEAM_NAMES  = ['레드팀','블루팀','그린팀','옐로팀','핑크팀'];
+const TEAM_COUNT  = 5;
+const TEAM_SIZE   = 5;
+
+let gameMode = 'solo'; // 'solo' | 'team'
+let playerTeam = -1;
+
+// ── Sound System (Web Audio API) ──────────────────────
+const sfx = (() => {
+  let ac = null;
+  function ctx() {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function tone(freq, type, vol, dur, freqEnd=null, delay=0) {
+    try {
+      const c = ctx(), osc = c.createOscillator(), g = c.createGain();
+      osc.connect(g); g.connect(c.destination);
+      osc.type = type;
+      const t = c.currentTime + delay;
+      osc.frequency.setValueAtTime(freq, t);
+      if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t+dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      osc.start(t); osc.stop(t+dur);
+    } catch(e) {}
+  }
+  function noise(vol, dur, delay=0) {
+    try {
+      const c = ctx();
+      const buf = c.createBuffer(1, c.sampleRate*dur, c.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i=0;i<data.length;i++) data[i]=Math.random()*2-1;
+      const src = c.createBufferSource(), g = c.createGain();
+      src.buffer = buf; src.connect(g); g.connect(c.destination);
+      const t = c.currentTime + delay;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      src.start(t); src.stop(t+dur);
+    } catch(e) {}
+  }
+  let _lastEatFood = 0;
+  return {
+    eatFood()  {
+      const now = Date.now();
+      if (now - _lastEatFood < 80) return;
+      _lastEatFood = now;
+      tone(520, 'sine', 0.08, 0.07, 700);
+    },
+    eatCell()  { tone(120,'sine',0.25,0.18,60); tone(200,'sine',0.12,0.12,80,0.03); },
+    split()    { tone(300,'sine',0.18,0.1,500); tone(150,'sine',0.1,0.15,80,0.05); },
+    eject()    { tone(400,'sine',0.06,0.06,250); },
+    virusHit() { noise(0.3,0.12); tone(80,'sawtooth',0.15,0.2,40); },
+    die()      { tone(200,'sine',0.3,0.5,50); noise(0.15,0.4,0.05); },
+    start()    { [440,550,660].forEach((f,i)=>tone(f,'sine',0.2,0.15,null,i*0.12)); },
+    rank1()    { [440,550,660,880].forEach((f,i)=>tone(f,'sine',0.15,0.12,null,i*0.08)); },
+  };
+})();
+
+let mouse = { x: 0, y: 0 };
+let camera = { x: WORLD/2, y: WORLD/2, zoom: 1 };
+let gameRunning = false;
+let playerName = 'Player';
+let playerColor = null;
+let playerDisplayName = 'Player';
+let rank1Name = '';
+
+// 닉네임 색상 코드 파싱 [RRGGBB]이름
+function parseName(raw) {
+  const match = raw.match(/^\[([0-9A-Fa-f]{6})\](.*)$/);
+  if (match) return { color: '#' + match[1], name: match[2] || 'Player' };
+  return { color: null, name: raw || 'Player' };
+}
+
+// 매치 타이머
+const MATCH_DURATION = 12 * 60; // 12분 (초)
+let matchTime = MATCH_DURATION;
+let matchInterval = null;
+
+function startTimer() {
+  matchTime = MATCH_DURATION;
+  updateTimerUI();
+  clearInterval(matchInterval);
+  matchInterval = setInterval(() => {
+    matchTime--;
+    updateTimerUI();
+    if (matchTime <= 0) { clearInterval(matchInterval); endMatch(); }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  let m = Math.floor(matchTime / 60);
+  let s = matchTime % 60;
+  let el = document.getElementById('timer');
+  el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.className = matchTime <= 30 ? 'danger' : '';
+}
+
+function endMatch() {
+  gameRunning = false;
+  clearInterval(matchInterval);
+  document.getElementById('myinfo').style.display = 'none';
+  
+
+  let html = '';
+
+  if (gameMode === 'team') {
+    // 팀별 총합 질량으로 순위
+    let teamScores = TEAM_COLORS.map((c,t) => {
+      let mass = bots.filter(b=>b.team===t&&!b.dead).reduce((s,b)=>s+b.totalMass(),0);
+      if (t===playerTeam && player) mass += player.reduce((s,c)=>s+c.mass,0);
+      return { team: t, mass: Math.floor(mass), me: t===playerTeam };
+    });
+    teamScores.sort((a,b)=>b.mass-a.mass);
+    html = teamScores.map((e,i) => {
+      let medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+      let cls = (i===0?'gold':i===1?'silver':i===2?'bronze':'') + (e.me?' me':'');
+      return `<div class="result-entry ${cls}" style="border-left:4px solid ${TEAM_COLORS[e.team]}">
+        <span>${medal} ${TEAM_NAMES[e.team]}</span><span>${e.mass}</span></div>`;
+    }).join('');
+  } else {
+    // 개인전 결과
+    let entries = [];
+    if (player) entries.push({ name: playerDisplayName, mass: Math.floor(player.reduce((s,c)=>s+c.mass,0)), me: true });
+    for (let b of bots) if (!b.dead) entries.push({ name: b.name, mass: Math.floor(b.totalMass()), me: false });
+    entries.sort((a,b)=>b.mass-a.mass);
+    html = entries.slice(0,10).map((e,i) => {
+      let medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+      let cls = (i===0?'gold':i===1?'silver':i===2?'bronze':'') + (e.me?' me':'');
+      return `<div class="result-entry ${cls}"><span>${medal} ${e.name}</span><span>${e.mass}</span></div>`;
+    }).join('');
+  }
+
+  document.getElementById('result-list').innerHTML = html;
+  document.getElementById('result').style.display = 'flex';
+}
+
+// Color palette
+const COLORS = [
+  '#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff',
+  '#5f27cd','#00d2d3','#ff9f43','#1dd1a1','#ee5a24',
+  '#0abde3','#f368e0','#10ac84','#576574','#c8d6e5'
+];
+
+function randColor() { return COLORS[Math.floor(Math.random()*COLORS.length)]; }
+function rand(a,b) { return Math.random()*(b-a)+a; }
+function dist(a,b) { return Math.hypot(a.x-b.x, a.y-b.y); }
+
+// Entities
+let foods = [];
+let viruses = [];
+let bots = [];
+let player = null; // array of cells (split)
+let ejectedMass = [];
+
+class Cell {
+  constructor(x, y, mass, color, name='') {
+    this.x = x; this.y = y;
+    this.mass = mass;
+    this.r = massToR(mass);
+    this.color = color;
+    this.name = name;
+    this.vx = 0; this.vy = 0;
+    this.splitCooldown = 0;
+    this.mergeTimer = 0;
+  }
+}
+
+function massToR(mass) { return Math.sqrt(mass * 100); }
+function rToMass(r) { return (r*r)/100; }
+
+// ── Food ────────────────────────────────────────────
+const FOOD_SHAPES = ['diamond', 'triangle', 'hexagon', 'pentagon', 'square'];
+function spawnFood(n=1) {
+  for (let i=0; i<n; i++) {
+    foods.push({
+      x: rand(50,WORLD-50), y: rand(50,WORLD-50),
+      r: rand(7, 11), mass: 1, color: randColor(),
+      shape: FOOD_SHAPES[Math.floor(Math.random()*FOOD_SHAPES.length)],
+      rot: rand(0, Math.PI*2)
+    });
+  }
+}
+
+function spawnVirus() {
+  viruses.push({
+    x: rand(100,WORLD-100), y: rand(100,WORLD-100),
+    r: rand(40, 55), fed: 0, spikes: 12, color: '#2ed573'
+  });
+}
+
+function initFood() {
+  foods = []; viruses = [];
+  spawnFood(FOOD_COUNT);
+  for (let i=0;i<VIRUS_COUNT;i++) spawnVirus();
+}
+
+// ── Bots ─────────────────────────────────────────────
+class Bot {
+  constructor(team=-1) {
+    this.team = team;
+    this.color = team >= 0 ? TEAM_COLORS[team] : randColor();
+    this.name = randomBotName();
+    this.cells = [new Cell(rand(200,WORLD-200), rand(200,WORLD-200), rand(10,50), this.color, this.name)];
+    this.tx = rand(0,WORLD); this.ty = rand(0,WORLD);
+    this.thinkTimer = 0;
+    this.dead = false;
+    this.splitTarget = null; // 분열 공격 대상
+  }
+  totalMass() { return this.cells.reduce((s,c)=>s+c.mass,0); }
+  mainCell() { return this.cells.reduce((a,b)=>a.mass>b.mass?a:b); }
+
+  think() {
+    this.thinkTimer--;
+    if (this.thinkTimer > 0) return;
+    this.thinkTimer = 20 + Math.random()*40;
+
+    let myMass = this.totalMass();
+    let mc = this.mainCell();
+    this.splitTarget = null;
+
+    // 바이러스 회피 — 내가 크면 가시 근처 위험
+    if (myMass > 100) {
+      for (let v of viruses) {
+        let d = dist(mc, v);
+        if (d < v.r + mc.r + 80) {
+          // 바이러스 반대 방향으로 도망
+          this.tx = mc.x*2 - v.x;
+          this.ty = mc.y*2 - v.y;
+          return;
+        }
+      }
+    }
+
+    // 봇 탐색
+    let fleeTarget = null, chaseTarget = null;
+    let fleeDistMin = Infinity, chaseDistMin = Infinity;
+    for (let b of bots) {
+      if (b === this || b.dead) continue;
+      if (gameMode==='team' && b.team===this.team) continue;
+      let bm = b.totalMass();
+      let d = dist(mc, b.mainCell());
+      if (bm > myMass*1.15 && d < 500) {
+        if (d < fleeDistMin) { fleeDistMin=d; fleeTarget=b; }
+      }
+      if (bm < myMass*0.8 && d < 600) {
+        if (d < chaseDistMin) { chaseDistMin=d; chaseTarget=b; }
+      }
+    }
+
+    // 플레이어 탐색
+    if (player && !(gameMode==='team' && this.team===playerTeam)) {
+      let pm = player.reduce((s,c)=>s+c.mass,0);
+      let d = dist(mc, player[0]);
+      if (pm > myMass*1.15 && d < 500) {
+        if (d < fleeDistMin) { fleeDistMin=d; fleeTarget='player'; }
+      }
+      if (pm < myMass*0.8 && d < 600) {
+        if (d < chaseDistMin) { chaseDistMin=d; chaseTarget='player'; }
+      }
+    }
+
+    // 도망
+    if (fleeTarget) {
+      let fx = fleeTarget==='player' ? player[0].x : fleeTarget.mainCell().x;
+      let fy = fleeTarget==='player' ? player[0].y : fleeTarget.mainCell().y;
+      this.tx = mc.x*2 - fx;
+      this.ty = mc.y*2 - fy;
+      return;
+    }
+
+    // 추격 + 분열 공격
+    if (chaseTarget) {
+      let cx = chaseTarget==='player' ? player[0].x : chaseTarget.mainCell().x;
+      let cy = chaseTarget==='player' ? player[0].y : chaseTarget.mainCell().y;
+      let tm = chaseTarget==='player'
+        ? player.reduce((s,c)=>s+c.mass,0)
+        : chaseTarget.totalMass();
+      let d = chaseDistMin;
+      this.tx = cx; this.ty = cy;
+
+      // 분열 공격 조건: 내 질량이 상대의 2.2배 이상 + 사정거리 안
+      if (myMass > tm*2.2 && d < mc.r*2.5 && this.cells.length < MAX_CELLS) {
+        this.splitTarget = { x: cx, y: cy };
+      }
+      return;
+    }
+
+    // 먹이 탐색
+    let best = null, bestScore = -Infinity;
+    for (let f of foods) {
+      let d = dist(mc, f);
+      let score = f.r*3 - d*0.008;
+      if (score > bestScore) { bestScore = score; best = f; }
+    }
+    if (best) { this.tx = best.x; this.ty = best.y; }
+    else { this.tx = rand(0,WORLD); this.ty = rand(0,WORLD); }
+  }
+
+  update() {
+    if (this.dead) return;
+    this.think();
+
+    // 분열 공격 실행
+    if (this.splitTarget) {
+      splitCells(this.cells, this.splitTarget.x, this.splitTarget.y);
+      this.splitTarget = null;
+    }
+
+    for (let c of this.cells) {
+      let dx = this.tx - c.x, dy = this.ty - c.y;
+      let d = Math.hypot(dx,dy) || 1;
+      let spd = Math.max(1, 5 / Math.sqrt(c.mass/10));
+      let decay = Math.pow(c.mergeTimer > 80 ? 0.94 : 0.82, dt);
+      c.vx = c.vx*decay + (dx/d)*spd*(1-decay);
+      c.vy = c.vy*decay + (dy/d)*spd*(1-decay);
+      c.x = Math.max(c.r, Math.min(WORLD-c.r, c.x + c.vx*dt));
+      c.y = Math.max(c.r, Math.min(WORLD-c.r, c.y + c.vy*dt));
+      if (c.mergeTimer > 0) c.mergeTimer -= dt;
+      if (c.splitCooldown > 0) c.splitCooldown -= dt;
+    }
+    mergeCells(this.cells);
+  }
+}
+
+const BOT_NAMES = ['Zephyr','Nova','Blitz','Orion','Kira','Rex','Luna','Echo','Titan','Vex','Mochi','Boba','Doge','Rick','Pepe'];
+function randomBotName() { return BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)]; }
+
+// ── Cell merge ────────────────────────────────────────
+function mergeCells(cells) {
+  for (let i=0; i<cells.length; i++) {
+    for (let j=i+1; j<cells.length; j++) {
+      let a=cells[i], b=cells[j];
+      if (a.mergeTimer > 0 || b.mergeTimer > 0) continue;
+      if (dist(a,b) < a.r + b.r - Math.min(a.r,b.r)*0.5) {
+        // merge smaller into larger
+        if (a.mass >= b.mass) {
+          a.mass += b.mass; a.r = massToR(a.mass);
+          cells.splice(j,1); j--;
+        } else {
+          b.mass += a.mass; b.r = massToR(b.mass);
+          cells.splice(i,1); i--; break;
+        }
+      }
+    }
+  }
+}
+
+// ── Split ─────────────────────────────────────────────
+function splitCells(cells, tx, ty) {
+  let newCells = [];
+  for (let c of cells) {
+    if (cells.length + newCells.length >= MAX_CELLS) break;
+    if (c.mass < MIN_CELL_MASS * 2) continue;
+    let dx = tx - c.x, dy = ty - c.y;
+    let d = Math.hypot(dx,dy)||1;
+    let half = c.mass/2;
+    c.mass = half; c.r = massToR(half);
+    // 원래 세포는 반대 방향으로 살짝 밀림
+    c.vx = -(dx/d)*6; c.vy = -(dy/d)*6;
+    let nc = new Cell(c.x, c.y, half, c.color, c.name);
+    nc.vx = (dx/d)*35; nc.vy = (dy/d)*35;
+    nc.mergeTimer = 120;
+    c.mergeTimer = 120;
+    newCells.push(nc);
+  }
+  cells.push(...newCells);
+}
+
+// ── Eject mass (W key) ────────────────────────────────
+function ejectMass(cells, tx, ty, team=-1) {
+  for (let c of cells) {
+    if (c.mass < 40) continue;
+    let ejectAmt = 14;
+    let dx=tx-c.x, dy=ty-c.y, d=Math.hypot(dx,dy)||1;
+    c.mass -= ejectAmt; c.r = massToR(c.mass);
+    ejectedMass.push({
+      x: c.x+(dx/d)*(c.r+14), y: c.y+(dy/d)*(c.r+14),
+      vx: (dx/d)*14, vy: (dy/d)*14,
+      r: 16, mass: ejectAmt, color: c.color, life: Infinity, team
+    });
+  }
+}
+
+// ── Eating logic ──────────────────────────────────────
+function tryEat(eater, prey) {
+  return eater.mass > prey.mass*1.15 && dist(eater, prey) < eater.r - prey.r*0.5;
+}
+
+function eatFood(cells, isPlayer=false) {
+  for (let ci=0; ci<cells.length; ci++) {
+    let c = cells[ci];
+    for (let fi=foods.length-1; fi>=0; fi--) {
+      let f = foods[fi];
+      if (dist(c,f) < c.r + f.r - f.r*1.2) {
+        c.mass += f.mass;
+        c.r = massToR(c.mass);
+        foods.splice(fi,1);
+        if (isPlayer) sfx.eatFood();
+      }
+    }
+  }
+  if (foods.length < FOOD_COUNT) spawnFood(Math.min(5, FOOD_COUNT - foods.length));
+}
+
+function eatEjected(cells, myTeam=-1) {
+  for (let c of cells) {
+    for (let ei=ejectedMass.length-1; ei>=0; ei--) {
+      let e = ejectedMass[ei];
+      // 팀전: 다른 팀 먹이는 못 먹음, 같은 팀 먹이는 먹을 수 있음
+      if (gameMode === 'team') {
+        if (e.team !== -1 && e.team !== myTeam) continue;
+      }
+      if (dist(c,e) < c.r) {
+        c.mass += e.mass;
+        c.r = massToR(c.mass);
+        ejectedMass.splice(ei,1);
+      }
+    }
+  }
+}
+
+const MIN_CELL_MASS = 10;
+const MAX_CELLS = 16;
+
+function virusCheck(cells) {
+  for (let v of viruses) {
+    for (let ci = 0; ci < cells.length; ci++) {
+      let c = cells[ci];
+      if (c.mass < rToMass(v.r) * 1.1) continue;
+      if (dist(c, v) < c.r + v.r * 0.3) {
+        let virusIdx = viruses.indexOf(v);
+        c.mass += rToMass(v.r);
+        viruses.splice(virusIdx, 1);
+        setTimeout(() => spawnVirus(), 10000);
+        if (cells === player) sfx.virusHit();
+
+        // 현재 총 셀 수 기준으로 추가 분열 가능 수 계산
+        let maxNew = MAX_CELLS - cells.length;
+        if (maxNew <= 0) break;
+
+        // 이 셀이 분열할 수 있는 최대 조각 수
+        let maxPieces = Math.floor(c.mass / MIN_CELL_MASS);
+        let pieces = Math.min(maxNew + 1, maxPieces); // +1 포함 자기 자신
+        pieces = Math.max(2, pieces);
+
+        let eachMass = c.mass / pieces;
+        let angleStart = Math.random() * Math.PI * 2;
+
+        // 기존 셀 크기 조정
+        c.mass = eachMass;
+        c.r = massToR(eachMass);
+        c.mergeTimer = 240;
+
+        // 새 조각들 생성
+        for (let p = 1; p < pieces; p++) {
+          let angle = angleStart + (p / pieces) * Math.PI * 2;
+          let nc = new Cell(c.x, c.y, eachMass, c.color, c.name);
+          nc.vx = Math.cos(angle) * 18;
+          nc.vy = Math.sin(angle) * 18;
+          nc.mergeTimer = 240;
+          cells.push(nc);
+        }
+        break;
+      }
+    }
+    if (!viruses.includes(v)) break; // 가시 제거됐으면 루프 종료
+  }
+}
+
+// ── Decay ─────────────────────────────────────────────
+let decayTimer = 0;
+function applyDecay(cells) {
+  decayTimer += dt;
+  if (decayTimer < 60) return; decayTimer=0;
+  for (let c of cells) {
+    if (c.mass > 100) { c.mass -= (c.mass-100)*0.002; c.r=massToR(c.mass); }
+  }
+}
+
+// ── Camera ────────────────────────────────────────────
+function updateCamera() {
+  if (!player || player.length===0) return;
+
+  // 질량 가중 중심
+  let cx=0, cy=0, tot=0;
+  for (let c of player) { cx+=c.x*c.mass; cy+=c.y*c.mass; tot+=c.mass; }
+  let tx=cx/tot, ty=cy/tot;
+  camera.x += (tx-camera.x)*0.1;
+  camera.y += (ty-camera.y)*0.1;
+
+  // 모든 셀을 감싸는 바운딩 박스 계산
+  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  for (let c of player) {
+    minX = Math.min(minX, c.x - c.r);
+    maxX = Math.max(maxX, c.x + c.r);
+    minY = Math.min(minY, c.y - c.r);
+    maxY = Math.max(maxY, c.y + c.r);
+  }
+  let spanX = maxX - minX;
+  let spanY = maxY - minY;
+
+  // 바운딩 박스가 화면에 여유있게 들어오도록 줌 계산 (패딩 20%)
+  let zoomBySpan = Math.min(
+    W() / (spanX * 1.4 + 1),
+    H() / (spanY * 1.4 + 1)
+  );
+  // 셀 하나일 땐 기존 방식 (너무 당겨지지 않게)
+  let biggestR = Math.max(...player.map(c=>c.r));
+  let zoomBySingle = Math.min(1, 120 / (biggestR + 80));
+
+  // 분열 많을수록 스팬 기준 줌 우선
+  let targetZoom = player.length > 1
+    ? Math.min(zoomBySpan, zoomBySingle, 1)
+    : zoomBySingle;
+
+  targetZoom = Math.max(0.08, Math.min(targetZoom, 1));
+  camera.zoom += (targetZoom - camera.zoom) * 0.05;
+}
+
+function worldToScreen(x,y) {
+  return {
+    x: (x-camera.x)*camera.zoom + W()/2,
+    y: (y-camera.y)*camera.zoom + H()/2
+  };
+}
+
+function screenToWorld(x,y) {
+  return {
+    x: (x-W()/2)/camera.zoom + camera.x,
+    y: (y-H()/2)/camera.zoom + camera.y
+  };
+}
+
+// ── Grid background ───────────────────────────────────
+function drawGrid() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  let gridSize = 100;
+  let startX = Math.floor((camera.x - W()/(2*camera.zoom)) / gridSize) * gridSize;
+  let startY = Math.floor((camera.y - H()/(2*camera.zoom)) / gridSize) * gridSize;
+  let endX = camera.x + W()/(2*camera.zoom) + gridSize;
+  let endY = camera.y + H()/(2*camera.zoom) + gridSize;
+  for (let x=startX; x<endX; x+=gridSize) {
+    let s = worldToScreen(x,0);
+    ctx.beginPath(); ctx.moveTo(s.x,0); ctx.lineTo(s.x,H()); ctx.stroke();
+  }
+  for (let y=startY; y<endY; y+=gridSize) {
+    let s = worldToScreen(0,y);
+    ctx.beginPath(); ctx.moveTo(0,s.y); ctx.lineTo(W(),s.y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ── Draw cell ─────────────────────────────────────────
+function drawCrown(sx, sy, sr) {
+  let cw = sr * 0.9, ch = sr * 0.55;
+  let cx = sx, cy = sy - sr - ch * 0.3;
+  ctx.save();
+  ctx.fillStyle = '#FFD700';
+  ctx.strokeStyle = '#FFA500';
+  ctx.lineWidth = Math.max(1, sr * 0.04);
+  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(cx - cw/2, cy + ch/2);
+  ctx.lineTo(cx - cw/2, cy - ch/2);
+  ctx.lineTo(cx - cw/6, cy);
+  ctx.lineTo(cx, cy - ch/2);
+  ctx.lineTo(cx + cw/6, cy);
+  ctx.lineTo(cx + cw/2, cy - ch/2);
+  ctx.lineTo(cx + cw/2, cy + ch/2);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawCell(c, alpha=1) {
+  let s = worldToScreen(c.x,c.y);
+  let sr = c.r * camera.zoom;
+  if (sr < 1) return;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // flat fill
+  ctx.fillStyle = c.color;
+  ctx.beginPath(); ctx.arc(s.x,s.y,sr,0,Math.PI*2); ctx.fill();
+
+  // name
+  if (c.name && sr > 15) {
+    ctx.shadowBlur = 3; ctx.shadowColor='rgba(0,0,0,0.8)';
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.max(10,sr*0.35)}px Segoe UI`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(c.name, s.x, s.y);
+  }
+  ctx.restore();
+
+  // 방향 삼각형 — 플레이어 세포에만, 방향이 있을 때만
+  if (player && player.includes(c) && sr > 10) {
+    let dx = mouse.x - s.x;
+    let dy = mouse.y - s.y;
+    let d = Math.hypot(dx, dy);
+    if (d > sr * 0.3) { // 마우스가 세포 중심에서 어느 정도 떨어져 있을 때만
+      let angle = Math.atan2(dy, dx);
+      let triSize = Math.max(6, sr * 0.28); // 세포 크기 비례
+      let tipX = s.x + Math.cos(angle) * (sr + triSize * 0.6);
+      let tipY = s.y + Math.sin(angle) * (sr + triSize * 0.6);
+      let lx = s.x + Math.cos(angle) * (sr - triSize * 0.2);
+      let ly = s.y + Math.sin(angle) * (sr - triSize * 0.2);
+      let perpX = -Math.sin(angle) * triSize * 0.55;
+      let perpY =  Math.cos(angle) * triSize * 0.55;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 3;
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(lx + perpX, ly + perpY);
+      ctx.lineTo(lx - perpX, ly - perpY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // 왕관 (1위)
+  if (c.name === rank1Name && sr > 10) drawCrown(s.x, s.y, sr);
+}
+
+function shadeColor(hex, pct) {
+  let n = parseInt(hex.slice(1),16);
+  let r = Math.min(255,Math.max(0,(n>>16)+pct));
+  let g = Math.min(255,Math.max(0,((n>>8)&0xff)+pct));
+  let b = Math.min(255,Math.max(0,(n&0xff)+pct));
+  return `rgb(${r},${g},${b})`;
+}
+
+// ── Draw virus ────────────────────────────────────────
+function drawVirus(v) {
+  let s = worldToScreen(v.x,v.y);
+  let sr = v.r * camera.zoom;
+  if (sr < 2) return;
+  ctx.save();
+  ctx.fillStyle = '#2ed573';
+  ctx.strokeStyle = '#7bed9f';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#2ed573'; ctx.shadowBlur = 12;
+  ctx.beginPath();
+  for (let i=0;i<v.spikes*2;i++) {
+    let angle = (i/v.spikes/2)*Math.PI*2 - Math.PI/2;
+    let r = i%2===0 ? sr : sr*0.7;
+    i===0 ? ctx.moveTo(s.x+Math.cos(angle)*r, s.y+Math.sin(angle)*r)
+           : ctx.lineTo(s.x+Math.cos(angle)*r, s.y+Math.sin(angle)*r);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+// ── Draw food ─────────────────────────────────────────
+function drawPolygon(ctx, x, y, r, sides, rot) {
+  ctx.beginPath();
+  for (let i=0; i<sides; i++) {
+    let a = rot + (i/sides)*Math.PI*2 - Math.PI/2;
+    i===0 ? ctx.moveTo(x+Math.cos(a)*r, y+Math.sin(a)*r)
+           : ctx.lineTo(x+Math.cos(a)*r, y+Math.sin(a)*r);
+  }
+  ctx.closePath();
+}
+
+function drawDiamond(ctx, x, y, r) {
+  ctx.beginPath();
+  ctx.moveTo(x, y-r);
+  ctx.lineTo(x+r*0.7, y);
+  ctx.lineTo(x, y+r);
+  ctx.lineTo(x-r*0.7, y);
+  ctx.closePath();
+}
+
+function drawFood(f) {
+  let s = worldToScreen(f.x, f.y);
+  let sr = f.r * camera.zoom;
+  if (sr < 0.5) return;
+  f.rot = (f.rot||0) + 0.01;
+  ctx.save();
+  ctx.fillStyle = f.color;
+  ctx.shadowColor = f.color;
+  ctx.shadowBlur = sr * 1.2;
+  switch(f.shape) {
+    case 'diamond':   drawDiamond(ctx, s.x, s.y, sr); break;
+    case 'triangle':  drawPolygon(ctx, s.x, s.y, sr, 3, f.rot); break;
+    case 'square':    drawPolygon(ctx, s.x, s.y, sr*0.9, 4, f.rot+Math.PI/4); break;
+    case 'pentagon':  drawPolygon(ctx, s.x, s.y, sr, 5, f.rot); break;
+    case 'hexagon':   drawPolygon(ctx, s.x, s.y, sr, 6, f.rot); break;
+    default:          ctx.arc(s.x, s.y, sr, 0, Math.PI*2); break;
+  }
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── Draw border ───────────────────────────────────────
+function drawBorder() {
+  let tl = worldToScreen(0,0), br = worldToScreen(WORLD,WORLD);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,100,100,0.4)';
+  ctx.lineWidth = 4;
+  ctx.shadowColor='#ff4444'; ctx.shadowBlur=20;
+  ctx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y);
+  ctx.restore();
+}
+
+// ── Minimap ───────────────────────────────────────────
+function drawMinimap() {
+  mctx.clearRect(0,0,160,160);
+  mctx.fillStyle='rgba(0,0,0,0.6)';
+  mctx.fillRect(0,0,160,160);
+
+  let scale = 160/WORLD;
+
+  for (let f of foods) {
+    mctx.fillStyle = f.color;
+    mctx.fillRect(f.x*scale-0.5,f.y*scale-0.5,1.5,1.5);
+  }
+  for (let b of bots) {
+    for (let c of b.cells) {
+      mctx.fillStyle=c.color;
+      mctx.beginPath(); mctx.arc(c.x*scale,c.y*scale,Math.max(1,c.r*scale),0,Math.PI*2); mctx.fill();
+    }
+  }
+  if (player) {
+    for (let c of player) {
+      mctx.fillStyle='#7effa0';
+      mctx.beginPath(); mctx.arc(c.x*scale,c.y*scale,Math.max(2,c.r*scale),0,Math.PI*2); mctx.fill();
+    }
+    // viewport box
+    let vw=(W()/camera.zoom)*scale, vh=(H()/camera.zoom)*scale;
+    let vx=camera.x*scale-vw/2, vy=camera.y*scale-vh/2;
+    mctx.strokeStyle='rgba(255,255,255,0.4)';
+    mctx.lineWidth=1;
+    mctx.strokeRect(vx,vy,vw,vh);
+  }
+}
+
+// ── Leaderboard ───────────────────────────────────────
+function updateLeaderboard() {
+  let html = '';
+
+  if (gameMode === 'team') {
+    // 팀별 총합 + 인원수
+    let teamScores = TEAM_COLORS.map((col, t) => {
+      let members = bots.filter(b=>b.team===t&&!b.dead);
+      let mass = members.reduce((s,b)=>s+b.totalMass(), 0);
+      let count = members.length;
+      if (t === playerTeam && player) {
+        mass += player.reduce((s,c)=>s+c.mass, 0);
+        count += 1;
+      }
+      return { t, col, name: TEAM_NAMES[t], mass, count, me: t===playerTeam };
+    });
+    teamScores.sort((a,b)=>b.mass-a.mass);
+
+    rank1Name = ''; // 팀전은 왕관 없음
+    teamScores.forEach((e,i) => {
+      let icon = i===0?'👑':i===1?'🥈':i===2?'🥉':(i+1);
+      html += `<div class="entry ${e.me?'me':''}" style="border-left:3px solid ${e.col};padding-left:8px">
+        <span class="rank">${icon}</span>
+        <span style="color:${e.col};font-weight:700">${e.name}</span>
+        <span style="color:#aaa;font-size:11px">(${e.count})</span>
+        <span>${Math.floor(e.mass)}</span>
+      </div>`;
+    });
+
+    // 내 팀 순위
+    let myTeamRank = teamScores.findIndex(e=>e.me) + 1;
+    document.getElementById('info-rank').textContent = myTeamRank ? `${myTeamRank}위` : '-';
+
+  } else {
+    // 개인전
+    let entries = [];
+    if (player) {
+      let pm = player.reduce((s,c)=>s+c.mass, 0);
+      entries.push({ name: playerDisplayName, mass: pm, me: true });
+    }
+    for (let b of bots) {
+      if (!b.dead) entries.push({ name: b.name, mass: b.totalMass(), me: false });
+    }
+    entries.sort((a,b)=>b.mass-a.mass);
+    let prevRank1 = rank1Name;
+    rank1Name = entries.length > 0 ? entries[0].name : '';
+    if (rank1Name === playerDisplayName && prevRank1 !== playerDisplayName && player) sfx.rank1();
+
+    entries.slice(0,5).forEach((e,i) => {
+      let icon = i===0?'👑':(i+1);
+      html += `<div class="entry ${e.me?'me':''}"><span class="rank">${icon}</span><span>${e.name}</span><span>${Math.floor(e.mass)}</span></div>`;
+    });
+
+    let myRank = entries.findIndex(e=>e.me) + 1;
+    document.getElementById('info-rank').textContent = myRank || '-';
+  }
+
+  document.getElementById('lb-list').innerHTML = html;
+
+  if (player) {
+    document.getElementById('info-name').textContent = playerDisplayName;
+
+    let pv = document.getElementById('cell-preview');
+    let pc = pv.getContext('2d');
+    pc.clearRect(0,0,36,36);
+    pc.fillStyle = player[0].color;
+    pc.beginPath(); pc.arc(18,18,16,0,Math.PI*2); pc.fill();
+
+    document.getElementById('myinfo').style.display = 'flex';
+  }
+}
+
+// ── Bot eating interactions ───────────────────────────
+function botInteractions() {
+  // bots eat food
+  for (let b of bots) {
+    if (b.dead) continue;
+    eatFood(b.cells);
+    eatEjected(b.cells, b.team);
+    virusCheck(b.cells);
+    applyDecay(b.cells);
+  }
+
+  // bots eat bots
+  for (let i=0;i<bots.length;i++) {
+    if (bots[i].dead) continue;
+    for (let j=0;j<bots.length;j++) {
+      if (i===j||bots[j].dead) continue;
+      let a=bots[i], b=bots[j];
+      let sameTeam = gameMode==='team' && a.team===b.team;
+      for (let ci=a.cells.length-1;ci>=0;ci--) {
+        for (let cj=b.cells.length-1;cj>=0;cj--) {
+          if (ci>=a.cells.length||cj>=b.cells.length) continue;
+          // 같은 팀: b의 마지막 세포는 못 먹음 (1개 보존)
+          if (sameTeam && b.cells.length <= 1) continue;
+          if (tryEat(a.cells[ci], b.cells[cj])) {
+            a.cells[ci].mass += b.cells[cj].mass;
+            a.cells[ci].r = massToR(a.cells[ci].mass);
+            b.cells.splice(cj,1);
+          }
+        }
+      }
+      if (!sameTeam && b.cells.length===0) { b.dead=true; }
+    }
+  }
+
+  // bot eats player
+  if (player) {
+    for (let b of bots) {
+      if (b.dead) continue;
+      let sameTeam = gameMode==='team' && b.team===playerTeam;
+      for (let bc of b.cells) {
+        for (let pi=player.length-1;pi>=0;pi--) {
+          // 같은 팀: 플레이어 마지막 세포는 못 먹음
+          if (sameTeam && player.length <= 1) continue;
+          if (tryEat(bc,player[pi])) {
+            bc.mass+=player[pi].mass; bc.r=massToR(bc.mass);
+            player.splice(pi,1);
+            sfx.eatCell();
+          }
+        }
+      }
+    }
+    if (player.length===0) { sfx.die(); die(); return; }
+  }
+
+  // player eats bots
+  if (player) {
+    for (let b of bots) {
+      if (b.dead) continue;
+      let sameTeam = gameMode==='team' && b.team===playerTeam;
+      for (let pc of player) {
+        for (let ci=b.cells.length-1;ci>=0;ci--) {
+          if (ci>=b.cells.length) continue;
+          // 같은 팀: 봇 마지막 세포는 못 먹음
+          if (sameTeam && b.cells.length <= 1) continue;
+          if (tryEat(pc,b.cells[ci])) {
+            pc.mass+=b.cells[ci].mass; pc.r=massToR(pc.mass);
+            b.cells.splice(ci,1);
+            sfx.eatCell();
+          }
+        }
+      }
+      if (!sameTeam && b.cells.length===0) b.dead=true;
+    }
+  }
+
+  // respawn dead bots (팀전에선 같은 팀으로 리스폰)
+  for (let i=0;i<bots.length;i++) {
+    if (bots[i].dead) {
+      bots[i] = new Bot(gameMode==='team' ? bots[i].team : -1);
+    }
+  }
+}
+
+// ── Player update ─────────────────────────────────────
+function updatePlayer() {
+  if (!player) return;
+  let wm = screenToWorld(mouse.x, mouse.y);
+  for (let c of player) {
+    let dx=wm.x-c.x, dy=wm.y-c.y;
+    let d=Math.hypot(dx,dy)||1;
+    let spd = Math.max(1, 5/Math.sqrt(c.mass/10));
+    let decay = Math.pow(c.mergeTimer > 80 ? 0.94 : 0.8, dt);
+    if (d > c.r*0.5) {
+      c.vx = c.vx*decay + (dx/d)*spd*(1-decay);
+      c.vy = c.vy*decay + (dy/d)*spd*(1-decay);
+    } else {
+      c.vx*=decay; c.vy*=decay;
+    }
+    c.x = Math.max(c.r, Math.min(WORLD-c.r, c.x + c.vx*dt));
+    c.y = Math.max(c.r, Math.min(WORLD-c.r, c.y + c.vy*dt));
+    if (c.mergeTimer>0) c.mergeTimer -= dt;
+    if (c.splitCooldown>0) c.splitCooldown -= dt;
+  }
+
+  // split cell repulsion
+  for (let i=0;i<player.length;i++) {
+    for (let j=i+1;j<player.length;j++) {
+      let a=player[i],b=player[j];
+      let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||0.01;
+      if (d < a.r+b.r) {
+        let push=(a.r+b.r-d)*0.05*dt;
+        a.x-=dx/d*push; a.y-=dy/d*push;
+        b.x+=dx/d*push; b.y+=dy/d*push;
+      }
+    }
+  }
+  mergeCells(player);
+  eatFood(player, true);
+  eatEjected(player, playerTeam);
+  virusCheck(player);
+  applyDecay(player);
+}
+
+// ── Ejected mass update ───────────────────────────────
+const VIRUS_BASE_R = 40;
+const VIRUS_MAX_R = 70;
+const VIRUS_FEED_GROW = 3;   // 먹이 1개당 반지름 증가
+const VIRUS_SPLIT_AT = 7;    // 7개 흡수하면 분열
+
+function updateEjected() {
+  for (let ei=ejectedMass.length-1;ei>=0;ei--) {
+    let e=ejectedMass[ei];
+    e.x += e.vx*dt; e.y += e.vy*dt;
+    e.vx *= Math.pow(0.88, dt); e.vy *= Math.pow(0.88, dt);
+    e.life -= dt;
+    if (e.life <= 0) { ejectedMass.splice(ei,1); continue; }
+
+    // 벽 충돌 — 튕기고 멈춤
+    if (e.x < e.r)        { e.x = e.r;        e.vx = Math.abs(e.vx) * 0.3; }
+    if (e.x > WORLD-e.r)  { e.x = WORLD-e.r;  e.vx = -Math.abs(e.vx) * 0.3; }
+    if (e.y < e.r)        { e.y = e.r;        e.vy = Math.abs(e.vy) * 0.3; }
+    if (e.y > WORLD-e.r)  { e.y = WORLD-e.r;  e.vy = -Math.abs(e.vy) * 0.3; }
+
+    // 바이러스에 먹이 충돌 체크
+    for (let vi=viruses.length-1; vi>=0; vi--) {
+      let v = viruses[vi];
+      if (dist(e, v) < v.r + e.r) {
+        // 먹이 방향 기록
+        let speed = Math.hypot(e.vx, e.vy) || 1;
+        let dirX = e.vx / speed;
+        let dirY = e.vy / speed;
+
+        v.r += VIRUS_FEED_GROW;
+        v.fed = (v.fed || 0) + 1;
+        ejectedMass.splice(ei, 1);
+
+        if (v.fed >= VIRUS_SPLIT_AT || v.r >= VIRUS_MAX_R) {
+          // 분열 — 진행방향으로 새 바이러스 발사
+          let newV = {
+            x: v.x, y: v.y,
+            r: VIRUS_BASE_R, fed: 0, spikes: 12, color: '#2ed573',
+            vx: dirX * 15, vy: dirY * 15, moveLife: 60
+          };
+          viruses.push(newV);
+          v.r = VIRUS_BASE_R;
+          v.fed = 0;
+        }
+        break;
+      }
+    }
+  }
+
+  // 분열된 바이러스 이동
+  for (let v of viruses) {
+    if (v.moveLife > 0) {
+      v.x += v.vx*dt; v.y += v.vy*dt;
+      v.vx *= Math.pow(0.9, dt); v.vy *= Math.pow(0.9, dt);
+      v.moveLife -= dt;
+      v.x = Math.max(v.r, Math.min(WORLD-v.r, v.x));
+      v.y = Math.max(v.r, Math.min(WORLD-v.r, v.y));
+    }
+  }
+}
+
+// ── Main loop ─────────────────────────────────────────
+let frame=0;
+let lastTimestamp = 0;
+let dt = 1; // 60fps 기준 배율 (60fps=1.0, 144fps≈0.42)
+
+function loop(timestamp) {
+  if (!gameRunning) return;
+  frame++;
+
+  // 델타타임 계산 — 60fps 기준으로 정규화
+  if (lastTimestamp > 0) {
+    dt = Math.min((timestamp - lastTimestamp) / (1000/60), 3); // 최대 3배 제한 (탭 비활성 등)
+  }
+  lastTimestamp = timestamp;
+
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+
+  // Update
+  applyJoystick();
+  for (let b of bots) b.update();
+  updatePlayer();
+  updateEjected();
+  if (keys['KeyW'] && gameRunning && player && frame % 4 === 0) {
+    let wm = screenToWorld(mouse.x, mouse.y);
+    ejectMass(player, wm.x, wm.y, playerTeam);
+    sfx.eject();
+  }
+  if (frame%2===0) botInteractions();
+  updateCamera();
+
+  // Draw
+  ctx.fillStyle='#1f1f1f';
+  ctx.fillRect(0,0,W(),H());
+  drawGrid();
+  drawBorder();
+
+  for (let f of foods) drawFood(f);
+  for (let v of viruses) drawVirus(v);
+  for (let e of ejectedMass) {
+    let s=worldToScreen(e.x,e.y);
+    let sr=Math.max(1, e.r*camera.zoom);
+    ctx.save();
+    ctx.fillStyle=e.color;
+    ctx.strokeStyle='rgba(255,255,255,0.6)';
+    ctx.lineWidth=Math.max(1, sr*0.18);
+    ctx.shadowColor=e.color; ctx.shadowBlur=sr*0.8;
+    ctx.beginPath(); ctx.arc(s.x,s.y,sr,0,Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  for (let b of bots) { if (!b.dead) for (let c of b.cells) drawCell(c); }
+  if (player) for (let c of player) drawCell(c);
+
+  // Cursor (데스크탑만)
+  if (window.matchMedia('(pointer: fine)').matches) {
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(mouse.x,mouse.y,5,0,Math.PI*2); ctx.fill();
+  }
+
+  if (frame%6===0) { updateLeaderboard(); if(gameMode==='team') updateTeamIndicator(); }
+  requestAnimationFrame(loop);
+}
+
+// ── Game init ─────────────────────────────────────────
+function spawnPlayer() {
+  let color = gameMode==='team' ? TEAM_COLORS[playerTeam]
+            : (playerColor || COLORS[Math.floor(Math.random()*COLORS.length)]);
+  player = [new Cell(rand(200,WORLD-200), rand(200,WORLD-200), 20, color, playerDisplayName)];
+}
+
+function startGame(mode='solo') {
+  gameMode = mode;
+  let raw = document.getElementById('name-input').value.trim();
+  let parsed = parseName(raw);
+  playerColor = parsed.color;
+  playerDisplayName = parsed.name;
+  playerName = playerDisplayName;
+
+  // 팀 배정
+  playerTeam = mode==='team' ? 0 : -1;
+
+  spawnPlayer();
+  initFood();
+  bots = [];
+
+  if (mode==='team') {
+    for (let t=0; t<TEAM_COUNT; t++) {
+      let count = t===0 ? TEAM_SIZE-1 : TEAM_SIZE;
+      for (let i=0; i<count; i++) bots.push(new Bot(t));
+    }
+  } else {
+    for (let i=0;i<BOT_COUNT;i++) bots.push(new Bot(-1));
+  }
+
+  ejectedMass = [];
+  gameRunning = true;
+  lastTimestamp = 0;
+  dt = 1;
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('result').style.display = 'none';
+  sfx.start();
+  startTimer();
+  loop();
+}
+
+function updateTeamIndicator() {
+  // team-indicator UI 제거됨 — 리더보드에 팀 정보 통합
+}
+
+function die() {
+  // 즉시 리스폰 — 화면 전환 없음
+  spawnPlayer();
+}
+
+// ── Input ─────────────────────────────────────────────
+let keys = {};
+document.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+document.addEventListener('keydown', e=>{
+  keys[e.code] = true;
+  if (!gameRunning||!player) return;
+  if (e.code==='Space') { e.preventDefault(); let wm=screenToWorld(mouse.x,mouse.y); splitCells(player,wm.x,wm.y); sfx.split(); }
+});
+document.addEventListener('keyup', e=>{ keys[e.code] = false; });
+
+// ── 모바일 터치 입력 ──────────────────────────────────
+const joystickZone = document.getElementById('joystick-zone');
+const joystickBase = document.getElementById('joystick-base');
+const joystickKnob = document.getElementById('joystick-knob');
+
+const JOYSTICK_MAX = 50; // 최대 반경 (px)
+let joyActive = false;
+let joyOrigin = { x: 0, y: 0 };
+let joyDelta  = { x: 0, y: 0 }; // -1 ~ 1 정규화
+
+joystickZone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  joyOrigin = { x: t.clientX, y: t.clientY };
+  joyDelta  = { x: 0, y: 0 };
+  joyActive = true;
+}, { passive: false });
+
+joystickZone.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!joyActive) return;
+  const t = e.changedTouches[0];
+  let dx = t.clientX - joyOrigin.x;
+  let dy = t.clientY - joyOrigin.y;
+  let d = Math.hypot(dx, dy);
+  let clamped = Math.min(d, JOYSTICK_MAX);
+  let angle = Math.atan2(dy, dx);
+
+  joyDelta = { x: Math.cos(angle) * clamped / JOYSTICK_MAX,
+               y: Math.sin(angle) * clamped / JOYSTICK_MAX };
+
+  // 니트 위치 업데이트 (CSS transform 기준 left/bottom)
+  let baseLeft = 100, baseBottom = 100;
+  joystickKnob.style.left   = (baseLeft  + Math.cos(angle) * clamped) + 'px';
+  joystickKnob.style.bottom = (baseBottom - Math.sin(angle) * clamped) + 'px';
+}, { passive: false });
+
+joystickZone.addEventListener('touchend', e => {
+  e.preventDefault();
+  joyActive = false;
+  joyDelta  = { x: 0, y: 0 };
+  joystickKnob.style.left   = '100px';
+  joystickKnob.style.bottom = '100px';
+}, { passive: false });
+
+// 조이스틱 → mouse 포지션 변환 (매 프레임 호출)
+function applyJoystick() {
+  if (!joyActive || !player || player.length === 0) return;
+  const RANGE = 300; // 화면 중심에서 얼마나 멀리 타겟 잡을지
+  let cx = W() / 2, cy = H() / 2;
+  mouse.x = cx + joyDelta.x * RANGE;
+  mouse.y = cy + joyDelta.y * RANGE;
+}
+
+// 분열 / 발사 버튼
+document.getElementById('btn-split').addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!gameRunning || !player) return;
+  let wm = screenToWorld(mouse.x, mouse.y);
+  splitCells(player, wm.x, wm.y);
+  sfx.split();
+}, { passive: false });
+
+document.getElementById('btn-eject').addEventListener('touchstart', e => {
+  e.preventDefault();
+  keys['KeyW'] = true;
+}, { passive: false });
+document.getElementById('btn-eject').addEventListener('touchend', e => {
+  e.preventDefault();
+  keys['KeyW'] = false;
+}, { passive: false });
+
+// 스크롤 / 핀치줌 방지
+document.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+
+document.getElementById('play-btn').addEventListener('click', ()=>startGame('solo'));
+document.getElementById('team-btn').addEventListener('click', ()=>startGame('team'));
+document.getElementById('name-input').addEventListener('keydown', e=>{ if(e.key==='Enter') startGame(); });
+document.getElementById('result-btn').addEventListener('click', ()=>{
+  document.getElementById('result').style.display='none';
+  document.getElementById('menu').style.display='flex';
+});
+
+window.addEventListener('resize', ()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+</script>
+</body>
+</html>
