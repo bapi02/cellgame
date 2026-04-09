@@ -154,6 +154,25 @@
     user-select: none; -webkit-user-select: none;
   }
 
+  @media (pointer: coarse) {
+    /* 모바일: 설정 버튼 좌상단 (myinfo 옆) */
+    #settings-btn {
+      top: 12px; right: auto; left: 12px;
+      width: 40px; height: 40px; font-size: 18px;
+    }
+    /* myinfo 설정버튼 오른쪽으로 밀기 */
+    #myinfo {
+      left: 62px !important;
+    }
+    /* 리더보드 우상단 유지하되 타이머 아래로 */
+    #leaderboard {
+      top: 12px; right: 12px; padding: 8px 12px; min-width: 110px; font-size: 11px;
+    }
+    #leaderboard h3 { font-size: 9px; margin-bottom: 5px; }
+    #leaderboard .entry { padding: 2px 0; gap: 8px; }
+    #timer { font-size: 18px; padding: 6px 16px; }
+  }
+
   /* 설정 패널 */
   #settings-panel {
     position: fixed; inset: 0;
@@ -240,12 +259,6 @@
   @media (pointer: coarse) {
     #mobile-controls { display: block; }
     canvas { cursor: default; }
-    #leaderboard { top: 12px; right: 12px; padding: 8px 12px; min-width: 110px; font-size: 11px; }
-    #leaderboard h3 { font-size: 9px; margin-bottom: 5px; }
-    #leaderboard .entry { padding: 2px 0; gap: 8px; }
-    #myinfo { top: 12px; left: 12px; padding: 7px 12px; }
-    #myinfo .info-name { font-size: 13px; }
-    #timer { font-size: 18px; padding: 6px 16px; }
   }
 </style>
 </head>
