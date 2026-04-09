@@ -715,23 +715,27 @@ function virusCheck(cells) {
         // 분열은 MAX_CELLS 여유 있을 때만
         let maxNew = MAX_CELLS - cells.length;
         if (maxNew > 0) {
-          let maxPieces = Math.floor(c.mass / MIN_CELL_MASS);
-          let pieces = Math.min(maxNew + 1, maxPieces);
-          pieces = Math.max(2, pieces);
+          // 떼어낼 조각 수 계산 (최대 남은 슬롯만큼)
+          let pieces = Math.min(maxNew, Math.floor(c.mass / MIN_CELL_MASS) - 1);
+          pieces = Math.max(1, pieces);
 
-          let eachMass = c.mass / pieces;
+          // 조각 크기 = MIN_CELL_MASS, 큰 거 = 나머지
+          let chunkMass = MIN_CELL_MASS;
+          let bigMass = c.mass - chunkMass * pieces;
+
+          // 큰 거 하나 남기기
+          c.mass = bigMass;
+          c.r = massToR(bigMass);
+          c.mergeTimer = mergeTimerForMass(bigMass);
+
+          // 작은 조각들 사방으로 튕겨 나옴
           let angleStart = Math.random() * Math.PI * 2;
-          let mt = mergeTimerForMass(eachMass);
-          c.mass = eachMass;
-          c.r = massToR(eachMass);
-          c.mergeTimer = mt;
-
-          for (let p = 1; p < pieces; p++) {
+          for (let p = 0; p < pieces; p++) {
             let angle = angleStart + (p / pieces) * Math.PI * 2;
-            let nc = new Cell(c.x, c.y, eachMass, c.color, c.name);
-            nc.vx = Math.cos(angle) * 18;
-            nc.vy = Math.sin(angle) * 18;
-            nc.mergeTimer = mt;
+            let nc = new Cell(c.x, c.y, chunkMass, c.color, c.name);
+            nc.vx = Math.cos(angle) * 20;
+            nc.vy = Math.sin(angle) * 20;
+            nc.mergeTimer = mergeTimerForMass(chunkMass);
             cells.push(nc);
           }
         }
@@ -873,8 +877,19 @@ function drawCell(c, alpha=1) {
 
   // 방향 삼각형 — 플레이어 세포에만, 방향이 있을 때만
   if (player && player.includes(c) && sr > 10) {
-    let dx = mouse.x - s.x;
-    let dy = mouse.y - s.y;
+    // 중립이면 무게중심 방향, 아니면 마우스 방향
+    let neutral = !joyActive && player.length > 1 &&
+                  Math.hypot(mouse.x - W()/2, mouse.y - H()/2) < 30;
+    let tx, ty;
+    if (neutral) {
+      let cx=0, cy=0, tot=0;
+      for (let pc of player) { cx+=pc.x*pc.mass; cy+=pc.y*pc.mass; tot+=pc.mass; }
+      let wc = worldToScreen(cx/tot, cy/tot);
+      tx = wc.x; ty = wc.y;
+    } else {
+      tx = mouse.x; ty = mouse.y;
+    }
+    let dx = tx - s.x, dy = ty - s.y;
     let d = Math.hypot(dx, dy);
     if (d > sr * 0.3) { // 마우스가 세포 중심에서 어느 정도 떨어져 있을 때만
       let angle = Math.atan2(dy, dx);
@@ -1175,9 +1190,24 @@ function botInteractions() {
 // ── Player update ─────────────────────────────────────
 function updatePlayer() {
   if (!player) return;
+
+  // 무게중심 계산
+  let cx=0, cy=0, tot=0;
+  for (let c of player) { cx+=c.x*c.mass; cy+=c.y*c.mass; tot+=c.mass; }
+  cx/=tot; cy/=tot;
+
+  // 중립 상태: 조이스틱 안 쓰고 세포가 2개 이상일 때 → 무게중심으로
+  let neutral = !joyActive && player.length > 1 &&
+                Math.hypot(mouse.x - W()/2, mouse.y - H()/2) < 30;
+
   let wm = screenToWorld(mouse.x, mouse.y);
+
   for (let c of player) {
-    let dx=wm.x-c.x, dy=wm.y-c.y;
+    // 중립이면 각 세포가 무게중심을 타겟으로
+    let tx = neutral ? cx : wm.x;
+    let ty = neutral ? cy : wm.y;
+
+    let dx=tx-c.x, dy=ty-c.y;
     let d=Math.hypot(dx,dy)||1;
     let spd = Math.max(1, 5/Math.sqrt(c.mass/10));
     let decay = Math.pow(c.mergeTimer > 80 ? 0.94 : 0.8, dt);
@@ -1442,14 +1472,24 @@ joystickZone.addEventListener('touchend', e => {
   joystickKnob.style.bottom = '100px';
 }, { passive: false });
 
+// 조이스틱 중립 여부
+function isNeutral() {
+  if (joyActive) return false; // 모바일: 조이스틱 안 쓰는 중
+  // 데스크탑: 마우스가 화면 중앙 근처면 중립으로 간주
+  let cx = W()/2, cy = H()/2;
+  return Math.hypot(mouse.x - cx, mouse.y - cy) < 30;
+}
+
 // 조이스틱 → mouse 포지션 변환 (매 프레임 호출)
 function applyJoystick() {
-  if (!joyActive || !player || player.length === 0) return;
+  if (!player || player.length === 0) return;
+
+  if (!joyActive) return; // 모바일 조이스틱 미사용 시 패스
+
   const RANGE = 300;
   let cx = W() / 2, cy = H() / 2;
-  // 제곱 커브 적용 — 중앙 근처 느리게, 끝으로 갈수록 빠르게
-  let mag = Math.hypot(joyDelta.x, joyDelta.y); // 0~1
-  let curved = mag * mag; // 제곱으로 완만한 가속
+  let mag = Math.hypot(joyDelta.x, joyDelta.y);
+  let curved = mag * mag;
   let scale = mag > 0 ? curved / mag : 0;
   mouse.x = cx + joyDelta.x * scale * RANGE;
   mouse.y = cy + joyDelta.y * scale * RANGE;
