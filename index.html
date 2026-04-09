@@ -584,8 +584,8 @@ class Bot {
       let decay = Math.pow(c.mergeTimer > 80 ? 0.94 : 0.82, dt);
       c.vx = c.vx*decay + (dx/d)*spd*(1-decay);
       c.vy = c.vy*decay + (dy/d)*spd*(1-decay);
-      c.x = Math.max(c.r, Math.min(WORLD-c.r, c.x + c.vx*dt));
-      c.y = Math.max(c.r, Math.min(WORLD-c.r, c.y + c.vy*dt));
+      c.x = Math.max(c.r * 0.5, Math.min(WORLD - c.r * 0.5, c.x + c.vx*dt));
+      c.y = Math.max(c.r * 0.5, Math.min(WORLD - c.r * 0.5, c.y + c.vy*dt));
       if (c.mergeTimer > 0) c.mergeTimer -= dt;
       if (c.splitCooldown > 0) c.splitCooldown -= dt;
     }
@@ -1187,8 +1187,8 @@ function updatePlayer() {
     } else {
       c.vx*=decay; c.vy*=decay;
     }
-    c.x = Math.max(c.r, Math.min(WORLD-c.r, c.x + c.vx*dt));
-    c.y = Math.max(c.r, Math.min(WORLD-c.r, c.y + c.vy*dt));
+    c.x = Math.max(c.r * 0.5, Math.min(WORLD - c.r * 0.5, c.x + c.vx*dt));
+    c.y = Math.max(c.r * 0.5, Math.min(WORLD - c.r * 0.5, c.y + c.vy*dt));
     if (c.mergeTimer>0) c.mergeTimer -= dt;
     if (c.splitCooldown>0) c.splitCooldown -= dt;
   }
