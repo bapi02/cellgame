@@ -113,7 +113,9 @@
   position: fixed; inset: 0; z-index: 100;
   display: flex; flex-direction: column;
   background: linear-gradient(160deg, #0f2027 0%, #1a3a2a 50%, #0f2027 100%);
-  overflow: hidden; font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+  overflow-y: auto; overflow-x: hidden;
+  font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+  -webkit-overflow-scrolling: touch;
 }
 #lobby::before {
   content: ''; position: absolute; inset: 0;
@@ -270,10 +272,10 @@
 
 /* ── 하단 네비 ── */
 #bottom-nav {
-  margin-top: auto;
-  display: flex; background: rgba(0,0,0,0.5);
+  display: flex; background: rgba(0,0,0,0.6);
   border-top: 1px solid rgba(255,255,255,0.06);
-  position: relative; z-index: 2;
+  position: sticky; bottom: 0; z-index: 10;
+  backdrop-filter: blur(10px);
 }
 .nav-item {
   flex: 1; display: flex; flex-direction: column;
@@ -297,7 +299,7 @@
 }
 
 /* ── 콘텐츠 탭 패널 ── */
-.tab-panel { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+.tab-panel { display: none; flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 24px; }
 .tab-panel.active { display: flex; flex-direction: column; gap: 12px; }
 
 /* 랭킹 TBU */
@@ -401,14 +403,16 @@
 
   /* ── 설정 버튼 ── */
   #settings-btn {
-    position: fixed; top: 20px; right: 20px;
-    width: 44px; height: 44px; border-radius: 50%;
-    background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: #fff; font-size: 20px;
+    position: fixed; top: 14px; right: 14px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; font-size: 22px;
     display: none; align-items: center; justify-content: center;
     cursor: pointer; pointer-events: all; z-index: 60;
     user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: rgba(255,255,255,0.1);
+    touch-action: manipulation;
   }
 
   @media (pointer: coarse) {
@@ -517,6 +521,20 @@
     #mobile-controls { display: block; }
     canvas { cursor: default; }
   }
+
+/* 가로 모드 */
+@media (orientation: landscape) and (max-height: 500px) {
+  #lobby-top { padding: 10px 16px 8px; }
+  #profile-card { margin: 8px 16px 4px; padding: 10px 16px; }
+  #profile-avatar { width: 48px; height: 48px; }
+  #profile-name { font-size: 15px; }
+  #mode-btns { grid-template-columns: 1fr 1fr; }
+  .mode-btn { padding: 12px 10px; }
+  .mode-btn .mode-icon { font-size: 22px; }
+  .bottom-nav-spacer { height: 60px; }
+  #bottom-nav .nav-item { padding: 8px 0 6px; }
+  .nav-item .nav-icon { font-size: 18px; }
+}
 </style>
 </head>
 <body>
@@ -615,7 +633,6 @@
       <input id="name-input" type="text" maxlength="24"
         placeholder="닉네임 입력... [FF7777]색상코드 가능"
         class="" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px 16px;color:#fff;font-size:15px;outline:none;" />
-      <div id="name-hint">💡 [FF7777]닉네임 형식으로 색상 지정 가능</div>
     </div>
 
     <!-- 게임 모드 -->
@@ -1310,14 +1327,14 @@ function updateCamera() {
   );
   // 셀 하나일 땐 기존 방식 (너무 당겨지지 않게)
   let biggestR = Math.max(...player.map(c=>c.r));
-  let zoomBySingle = Math.min(1, 120 / (biggestR + 80));
+  let zoomBySingle = Math.min(0.7, 90 / (biggestR + 120));
 
   // 분열 많을수록 스팬 기준 줌 우선
   let targetZoom = player.length > 1
     ? Math.min(zoomBySpan, zoomBySingle, 1)
     : zoomBySingle;
 
-  targetZoom = Math.max(0.08, Math.min(targetZoom, 1));
+  targetZoom = Math.max(0.06, Math.min(targetZoom, 0.7));
   camera.zoom += (targetZoom - camera.zoom) * 0.05;
 }
 
@@ -2178,7 +2195,9 @@ function drawLobbyCell() {
 }
 document.getElementById('name-input').addEventListener('input', () => {
   const parsed = parseName(document.getElementById('name-input').value);
-  document.getElementById('profile-name-text').textContent = parsed.name || 'Player';
+  const nameEl = document.getElementById('profile-name-text');
+  nameEl.textContent = parsed.name || 'Player';
+  nameEl.style.color = parsed.color || '#fff';
   document.getElementById('member-display-name').textContent = parsed.name || 'Player';
   drawLobbyCell();
 });
