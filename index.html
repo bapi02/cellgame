@@ -113,9 +113,13 @@
   position: fixed; inset: 0; z-index: 100;
   display: flex; flex-direction: column;
   background: linear-gradient(160deg, #0f2027 0%, #1a3a2a 50%, #0f2027 100%);
-  overflow-y: auto; overflow-x: hidden;
+  overflow: hidden;
   font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+}
+#lobby-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column;
 }
 #lobby::before {
   content: ''; position: absolute; inset: 0;
@@ -590,6 +594,7 @@
   <div class="bg-cell" style="width:80px;height:80px;bottom:20%;left:10%;animation-duration:14s;animation-delay:-6s"></div>
   <div class="bg-cell" style="width:60px;height:60px;top:60%;right:15%;animation-duration:11s;animation-delay:-2s"></div>
 
+  <div id="lobby-scroll">
   <!-- 상단 바 -->
   <div id="lobby-top">
     <div id="lobby-logo">Cell<span>.io</span></div>
@@ -761,6 +766,7 @@
     </button>
   </div>
 
+  </div><!-- /lobby-scroll -->
   <!-- 하단 네비 -->
   <div id="bottom-nav">
     <div class="nav-item active" data-tab="game" onclick="switchTab('game')">
@@ -1320,22 +1326,22 @@ function updateCamera() {
   let spanX = maxX - minX;
   let spanY = maxY - minY;
 
-  // 바운딩 박스가 화면에 여유있게 들어오도록 줌 계산 (패딩 20%)
+  // 바운딩 박스 기반 줌 (여유 패딩 30%)
   let zoomBySpan = Math.min(
-    W() / (spanX * 1.4 + 1),
-    H() / (spanY * 1.4 + 1)
+    W() / (spanX * 1.6 + 1),
+    H() / (spanY * 1.6 + 1)
   );
-  // 셀 하나일 땐 기존 방식 (너무 당겨지지 않게)
+  // 셀 하나일 때 — 적당히 당기되 너무 크지 않게
   let biggestR = Math.max(...player.map(c=>c.r));
-  let zoomBySingle = Math.min(0.7, 90 / (biggestR + 120));
+  let zoomBySingle = Math.min(0.85, 150 / (biggestR + 80));
 
-  // 분열 많을수록 스팬 기준 줌 우선
+  // 분열 있을 때: 바운딩박스 줌 사용 (모든 셀 화면에)
   let targetZoom = player.length > 1
-    ? Math.min(zoomBySpan, zoomBySingle, 1)
+    ? Math.min(zoomBySpan, zoomBySingle)
     : zoomBySingle;
 
-  targetZoom = Math.max(0.06, Math.min(targetZoom, 0.7));
-  camera.zoom += (targetZoom - camera.zoom) * 0.05;
+  targetZoom = Math.max(0.05, Math.min(targetZoom, 0.85));
+  camera.zoom += (targetZoom - camera.zoom) * 0.04; // 더 부드럽게
 }
 
 function worldToScreen(x,y) {
