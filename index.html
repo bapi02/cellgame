@@ -108,26 +108,283 @@
     #score { bottom: auto; top: 130px; }
   }
 
-  #menu {
-    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 100;
-    flex-direction: column; gap: 20px;
-  }
-  #menu h1 { font-size: 64px; font-weight: 900; color: #fff; letter-spacing: -2px; }
-  #menu h1 span { color: #7effa0; }
-  #menu input {
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px; padding: 14px 22px; color: #fff; font-size: 18px;
-    outline: none; width: 260px; text-align: center;
-  }
-  #menu input::placeholder { color: rgba(255,255,255,0.3); }
-  #menu button {
-    background: #7effa0; color: #000; font-size: 17px; font-weight: 700;
-    border: none; border-radius: 8px; padding: 14px 40px; cursor: pointer;
-    pointer-events: all; transition: transform 0.1s, background 0.15s;
-  }
-  #menu button:hover { background: #a0ffbc; transform: scale(1.04); }
-  #menu .hint { color: rgba(255,255,255,0.3); font-size: 13px; text-align: center; line-height: 1.7; }
+/* ── 로비 전체 ── */
+#lobby {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, #0f2027 0%, #1a3a2a 50%, #0f2027 100%);
+  overflow: hidden; font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+}
+#lobby::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(46,213,115,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(84,160,255,0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* 배경 세포 애니메이션 */
+.bg-cell {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(126,255,160,0.15), rgba(46,213,115,0.04));
+  border: 1px solid rgba(46,213,115,0.12);
+  animation: floatCell linear infinite;
+  pointer-events: none;
+}
+@keyframes floatCell {
+  0%   { transform: translate(0,0) scale(1); opacity: 0.4; }
+  33%  { transform: translate(30px,-40px) scale(1.05); opacity: 0.7; }
+  66%  { transform: translate(-20px,20px) scale(0.95); opacity: 0.5; }
+  100% { transform: translate(0,0) scale(1); opacity: 0.4; }
+}
+
+/* ── 상단 바 ── */
+#lobby-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(46,213,115,0.1);
+  position: relative; z-index: 2;
+}
+#lobby-logo {
+  font-size: 26px; font-weight: 900; letter-spacing: -1px;
+  color: #fff;
+}
+#lobby-logo span { color: #2ed573; }
+#lobby-currency {
+  display: flex; gap: 10px; align-items: center;
+}
+.currency-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 5px 12px;
+  color: #fff; font-size: 13px; font-weight: 700;
+}
+.currency-badge .icon { font-size: 15px; }
+.currency-badge .add-btn {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #2ed573; color: #000; font-size: 13px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; margin-left: 2px;
+}
+
+/* ── 프로필 카드 ── */
+#profile-card {
+  margin: 16px 16px 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(46,213,115,0.2);
+  border-radius: 20px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 16px;
+  position: relative; z-index: 2;
+  backdrop-filter: blur(10px);
+}
+#profile-avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 3px solid #2ed573;
+  background: #1a3a2a;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(46,213,115,0.3);
+  overflow: hidden;
+}
+#profile-avatar canvas { width: 100%; height: 100%; }
+#profile-info { flex: 1; }
+#profile-name {
+  font-size: 18px; font-weight: 800; color: #fff;
+  display: flex; align-items: center; gap: 8px;
+}
+#profile-level {
+  font-size: 11px; background: #2ed573; color: #000;
+  font-weight: 900; padding: 2px 8px; border-radius: 10px;
+}
+#profile-sub {
+  font-size: 12px; color: rgba(255,255,255,0.4);
+  margin-top: 3px;
+}
+#profile-stats {
+  display: flex; gap: 16px; margin-top: 8px;
+}
+.p-stat { text-align: center; }
+.p-stat .val { font-size: 15px; font-weight: 800; color: #7effa0; }
+.p-stat .lbl { font-size: 10px; color: rgba(255,255,255,0.4); }
+#profile-edit-btn {
+  background: rgba(46,213,115,0.15); border: 1px solid rgba(46,213,115,0.3);
+  color: #2ed573; font-size: 12px; font-weight: 700;
+  border-radius: 10px; padding: 6px 12px; cursor: pointer;
+  pointer-events: all; align-self: flex-start;
+}
+
+/* ── 닉네임 편집 ── */
+#name-edit-wrap {
+  padding: 0 16px 6px; position: relative; z-index: 2;
+}
+#name-input-lobby {
+  width: 100%;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px; padding: 10px 16px; color: #fff; font-size: 15px;
+  outline: none; text-align: left; display: block;
+}
+#name-input-lobby::placeholder { color: rgba(255,255,255,0.25); }
+#name-hint { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; padding-left: 4px; }
+
+/* ── 게임 모드 버튼 ── */
+#mode-section {
+  padding: 0 16px; position: relative; z-index: 2;
+}
+#mode-section h3 {
+  font-size: 12px; color: rgba(255,255,255,0.4);
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+#mode-btns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.mode-btn {
+  border-radius: 16px; padding: 18px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; pointer-events: all;
+  border: 2px solid transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative; overflow: hidden;
+}
+.mode-btn:active { transform: scale(0.96); }
+.mode-btn .mode-icon { font-size: 32px; }
+.mode-btn .mode-name { font-size: 15px; font-weight: 800; color: #fff; }
+.mode-btn .mode-desc { font-size: 11px; color: rgba(255,255,255,0.6); }
+.mode-btn .mode-badge {
+  position: absolute; top: 10px; right: 10px;
+  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 8px;
+}
+#btn-solo {
+  background: linear-gradient(135deg, #1a4a2e, #0d2a1a);
+  border-color: rgba(46,213,115,0.4);
+  box-shadow: 0 4px 20px rgba(46,213,115,0.1);
+}
+#btn-solo .mode-badge { background: #2ed573; color: #000; }
+#btn-team {
+  background: linear-gradient(135deg, #1a2a4a, #0d1a2a);
+  border-color: rgba(84,160,255,0.4);
+  box-shadow: 0 4px 20px rgba(84,160,255,0.1);
+}
+#btn-team .mode-badge { background: #54a0ff; color: #fff; }
+
+/* ── 하단 네비 ── */
+#bottom-nav {
+  margin-top: auto;
+  display: flex; background: rgba(0,0,0,0.5);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  position: relative; z-index: 2;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 12px 0 10px; gap: 4px;
+  cursor: pointer; pointer-events: all;
+  color: rgba(255,255,255,0.35); font-size: 11px;
+  transition: color 0.2s;
+  position: relative;
+}
+.nav-item.active { color: #2ed573; }
+.nav-item.active::after {
+  content: ''; position: absolute; top: 0; left: 25%; right: 25%;
+  height: 2px; background: #2ed573; border-radius: 0 0 2px 2px;
+}
+.nav-item .nav-icon { font-size: 22px; }
+.nav-item .tbu-dot {
+  position: absolute; top: 10px; right: calc(50% - 14px);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #ff6b6b;
+}
+
+/* ── 콘텐츠 탭 패널 ── */
+.tab-panel { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+.tab-panel.active { display: flex; flex-direction: column; gap: 12px; }
+
+/* 랭킹 TBU */
+.tbu-card {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px; padding: 40px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.tbu-icon { font-size: 48px; }
+.tbu-title { font-size: 18px; font-weight: 800; color: #fff; }
+.tbu-desc { font-size: 13px; color: rgba(255,255,255,0.35); text-align: center; line-height: 1.6; }
+.tbu-badge {
+  background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.4);
+  color: #ff6b6b; font-size: 11px; font-weight: 700;
+  padding: 4px 12px; border-radius: 10px; margin-top: 4px;
+}
+
+/* 랭킹 미리보기 */
+.rank-row {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px; padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px; color: #fff;
+}
+.rank-num { width: 24px; text-align: center; font-weight: 900; color: rgba(255,255,255,0.3); font-size: 14px; }
+.rank-num.gold { color: #ffd700; }
+.rank-num.silver { color: #c0c0c0; }
+.rank-num.bronze { color: #cd7f32; }
+.rank-cell { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
+.rank-info { flex: 1; }
+.rank-name { font-size: 14px; font-weight: 700; }
+.rank-sub { font-size: 11px; color: rgba(255,255,255,0.35); }
+.rank-mass { font-size: 14px; font-weight: 800; color: #7effa0; }
+
+/* 스킨 그리드 */
+.skin-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.skin-card {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 16px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.skin-preview {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.skin-name { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 700; text-align: center; }
+.skin-lock { font-size: 18px; }
+
+/* 회원 프로필 */
+.member-card {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px; padding: 24px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.member-avatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, #2ed573, #0abde3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; border: 3px solid #2ed573;
+}
+.member-name { font-size: 20px; font-weight: 800; color: #fff; }
+.member-region { font-size: 12px; color: rgba(255,255,255,0.4); }
+.member-stats {
+  display: flex; gap: 0; width: 100%;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden;
+  margin-top: 4px;
+}
+.member-stat {
+  flex: 1; padding: 12px 0; text-align: center;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.member-stat:last-child { border-right: none; }
+.member-stat .v { font-size: 18px; font-weight: 800; color: #7effa0; }
+.member-stat .l { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+.member-action-btn {
+  width: 100%; padding: 13px;
+  border-radius: 12px; border: none;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  pointer-events: all;
+}
+.member-action-btn.primary { background: #2ed573; color: #000; }
+.member-action-btn.secondary {
+  background: rgba(255,255,255,0.07); color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
 
   #dead {
     position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
@@ -275,6 +532,7 @@
   <div id="leaderboard"><h3>Leaderboard</h3><div id="lb-list"></div></div>
   <div id="timer">12:00</div>
   <div id="settings-btn" onclick="openSettings()">⚙️</div>
+  <div id="team-indicator" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:none;gap:10px;align-items:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 18px;pointer-events:none;flex-wrap:wrap;"></div>
 </div>
 
 <div id="settings-panel">
@@ -307,24 +565,217 @@
   </div>
 </div>
 
-<div id="menu">
-  <h1>Cell<span>.io</span></h1>
-  <input id="name-input" type="text" maxlength="24" placeholder="닉네임 입력... [FF7777]색상코드 가능" />
-  <div style="display:flex;gap:12px;">
-    <button id="play-btn">개인전</button>
-    <button id="team-btn" style="background:#54a0ff;">팀전</button>
+<div id="lobby">
+  <!-- 배경 세포들 -->
+  <div class="bg-cell" style="width:180px;height:180px;top:10%;left:-5%;animation-duration:12s;animation-delay:0s"></div>
+  <div class="bg-cell" style="width:120px;height:120px;top:40%;right:-3%;animation-duration:9s;animation-delay:-3s"></div>
+  <div class="bg-cell" style="width:80px;height:80px;bottom:20%;left:10%;animation-duration:14s;animation-delay:-6s"></div>
+  <div class="bg-cell" style="width:60px;height:60px;top:60%;right:15%;animation-duration:11s;animation-delay:-2s"></div>
+
+  <!-- 상단 바 -->
+  <div id="lobby-top">
+    <div id="lobby-logo">Cell<span>.io</span></div>
+    <div id="lobby-currency">
+      <div class="currency-badge">
+        <span class="icon">💎</span>
+        <span id="gem-count">0</span>
+        <span class="add-btn">+</span>
+      </div>
+      <div class="currency-badge">
+        <span class="icon">🍬</span>
+        <span id="candy-count">0</span>
+        <span class="add-btn">+</span>
+      </div>
+    </div>
   </div>
-  <div class="hint">
-    🖥 마우스 이동 · 스페이스: 분열 · W: 먹이 발사<br>
-    📱 조이스틱 이동 · 버튼으로 분열/발사<br>
-    [FF7777]닉네임 형식으로 색상 지정 가능
+
+  <!-- 게임 탭 -->
+  <div id="tab-game" class="tab-panel active">
+    <!-- 프로필 카드 -->
+    <div id="profile-card">
+      <div id="profile-avatar">
+        <canvas id="lobby-cell-canvas" width="64" height="64"></canvas>
+      </div>
+      <div id="profile-info">
+        <div id="profile-name">
+          <span id="profile-name-text">Player</span>
+          <span id="profile-level">Lv.1</span>
+        </div>
+        <div id="profile-sub">🌏 한국</div>
+        <div id="profile-stats">
+          <div class="p-stat"><div class="val" id="stat-wins">0</div><div class="lbl">승리</div></div>
+          <div class="p-stat"><div class="val" id="stat-games">0</div><div class="lbl">게임</div></div>
+          <div class="p-stat"><div class="val" id="stat-best">0</div><div class="lbl">최고질량</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 닉네임 입력 -->
+    <div id="name-edit-wrap">
+      <input id="name-input" type="text" maxlength="24"
+        placeholder="닉네임 입력... [FF7777]색상코드 가능"
+        class="" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px 16px;color:#fff;font-size:15px;outline:none;" />
+      <div id="name-hint">💡 [FF7777]닉네임 형식으로 색상 지정 가능</div>
+    </div>
+
+    <!-- 게임 모드 -->
+    <div id="mode-section">
+      <h3>게임 모드 선택</h3>
+      <div id="mode-btns">
+        <div class="mode-btn" id="btn-solo">
+          <div class="mode-badge">추천</div>
+          <div class="mode-icon">🦠</div>
+          <div class="mode-name">개인전</div>
+          <div class="mode-desc">최후의 1인 생존</div>
+        </div>
+        <div class="mode-btn" id="btn-team">
+          <div class="mode-badge">팀전</div>
+          <div class="mode-icon">🫧</div>
+          <div class="mode-name">팀전</div>
+          <div class="mode-desc">5팀 협력 전투</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 조작법 -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);line-height:1.9;">
+        🖥 마우스 이동 · <b style="color:rgba(255,255,255,0.5)">스페이스</b>: 분열 · <b style="color:rgba(255,255,255,0.5)">W</b>: 포자 발사<br>
+        📱 조이스틱 이동 · 오른쪽 버튼으로 분열/발사
+      </div>
+    </div>
+  </div>
+
+  <!-- 랭킹 탭 -->
+  <div id="tab-rank" class="tab-panel">
+    <div class="tbu-card">
+      <div class="tbu-icon">🏆</div>
+      <div class="tbu-title">랭킹 시스템</div>
+      <div class="tbu-desc">시즌별 랭크 시스템이<br>곧 업데이트 됩니다!</div>
+      <div class="tbu-badge">Coming Soon</div>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.25);padding:4px 2px;">이번 시즌 TOP 플레이어 (임시)</div>
+    <div class="rank-row">
+      <div class="rank-num gold">👑</div>
+      <div class="rank-cell" style="background:linear-gradient(135deg,#ff6b6b,#ee5a24)"></div>
+      <div class="rank-info"><div class="rank-name">Zephyr</div><div class="rank-sub">경기도</div></div>
+      <div class="rank-mass">53,738</div>
+    </div>
+    <div class="rank-row">
+      <div class="rank-num silver">2</div>
+      <div class="rank-cell" style="background:linear-gradient(135deg,#54a0ff,#2e86de)"></div>
+      <div class="rank-info"><div class="rank-name">Nova</div><div class="rank-sub">서울</div></div>
+      <div class="rank-mass">42,100</div>
+    </div>
+    <div class="rank-row">
+      <div class="rank-num bronze">3</div>
+      <div class="rank-cell" style="background:linear-gradient(135deg,#2ed573,#1dd1a1)"></div>
+      <div class="rank-info"><div class="rank-name">Kira</div><div class="rank-sub">부산</div></div>
+      <div class="rank-mass">38,520</div>
+    </div>
+  </div>
+
+  <!-- 스킨 탭 -->
+  <div id="tab-skin" class="tab-panel">
+    <div class="tbu-card">
+      <div class="tbu-icon">🎨</div>
+      <div class="tbu-title">스킨 시스템</div>
+      <div class="tbu-desc">세포 스킨, 프레임, 이펙트 등<br>다양한 커스터마이징이 준비 중입니다!</div>
+      <div class="tbu-badge">Coming Soon</div>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.25);padding:4px 2px;">미리보기</div>
+    <div class="skin-grid">
+      <div class="skin-card">
+        <div class="skin-preview" style="background:linear-gradient(135deg,#ff6b6b,#ee5a24)"></div>
+        <div class="skin-name">불꽃</div>
+        <div class="skin-lock">🔒</div>
+      </div>
+      <div class="skin-card">
+        <div class="skin-preview" style="background:linear-gradient(135deg,#54a0ff,#0abde3)"></div>
+        <div class="skin-name">오션</div>
+        <div class="skin-lock">🔒</div>
+      </div>
+      <div class="skin-card">
+        <div class="skin-preview" style="background:linear-gradient(135deg,#feca57,#ff9f43)"></div>
+        <div class="skin-name">골드</div>
+        <div class="skin-lock">🔒</div>
+      </div>
+      <div class="skin-card">
+        <div class="skin-preview" style="background:linear-gradient(135deg,#2ed573,#1dd1a1)"></div>
+        <div class="skin-name">포레스트</div>
+        <div class="skin-lock">🔒</div>
+      </div>
+      <div class="skin-card">
+        <div class="skin-preview" style="background:linear-gradient(135deg,#ff9ff3,#f368e0)"></div>
+        <div class="skin-name">핑크</div>
+        <div class="skin-lock">🔒</div>
+      </div>
+      <div class="skin-card">
+        <div class="skin-preview" style="background:linear-gradient(135deg,#5f27cd,#341f97)"></div>
+        <div class="skin-name">다크</div>
+        <div class="skin-lock">🔒</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회원 탭 -->
+  <div id="tab-member" class="tab-panel">
+    <div class="member-card">
+      <div class="member-avatar" id="member-avatar-icon">🦠</div>
+      <div class="member-name" id="member-display-name">Player</div>
+      <div class="member-region">🌏 한국</div>
+      <div class="member-stats">
+        <div class="member-stat"><div class="v" id="m-wins">0</div><div class="l">승리</div></div>
+        <div class="member-stat"><div class="v" id="m-games">0</div><div class="l">게임</div></div>
+        <div class="member-stat"><div class="v" id="m-best">0</div><div class="l">최고질량</div></div>
+      </div>
+    </div>
+    <div class="tbu-card" style="padding:20px">
+      <div class="tbu-icon" style="font-size:32px">👥</div>
+      <div class="tbu-title" style="font-size:14px">소셜 기능</div>
+      <div class="tbu-desc" style="font-size:12px">친구, 팬, 채팅 기능이<br>곧 업데이트 됩니다!</div>
+      <div class="tbu-badge">Coming Soon</div>
+    </div>
+    <button class="member-action-btn primary" onclick="alert('로그인 기능 준비 중!')">
+      🔑 로그인 / 회원가입
+    </button>
+    <button class="member-action-btn secondary" onclick="goToMenu()">
+      🏠 메인으로
+    </button>
+  </div>
+
+  <!-- 하단 네비 -->
+  <div id="bottom-nav">
+    <div class="nav-item active" data-tab="game" onclick="switchTab('game')">
+      <div class="nav-icon">🎮</div>
+      <span>게임</span>
+    </div>
+    <div class="nav-item" data-tab="rank" onclick="switchTab('rank')">
+      <div class="nav-icon">🏆</div>
+      <div class="tbu-dot"></div>
+      <span>랭킹</span>
+    </div>
+    <div class="nav-item" data-tab="skin" onclick="switchTab('skin')">
+      <div class="nav-icon">🎨</div>
+      <div class="tbu-dot"></div>
+      <span>스킨</span>
+    </div>
+    <div class="nav-item" data-tab="member" onclick="switchTab('member')">
+      <div class="nav-icon">👤</div>
+      <span>회원</span>
+    </div>
   </div>
 </div>
 
 <div id="result">
-  <h2>🏆 결과</h2>
+  <div style="font-size:48px;margin-bottom:8px;">🏆</div>
+  <h2 style="font-size:28px;font-weight:900;color:#fff;margin-bottom:4px;">게임 결과</h2>
+  <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;" id="result-sub">수고하셨습니다!</div>
   <div class="result-list" id="result-list"></div>
-  <button id="result-btn">다시하기</button>
+  <div style="display:flex;gap:10px;margin-top:16px;">
+    <button id="result-btn" style="flex:1;">🔄 다시 플레이</button>
+    <button id="result-lobby-btn" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);">🏠 로비</button>
+  </div>
 </div>
 
 <script>
@@ -658,7 +1109,7 @@ class Bot {
     for (let c of this.cells) {
       let dx = this.tx - c.x, dy = this.ty - c.y;
       let d = Math.hypot(dx,dy) || 1;
-      let spd = Math.max(1, 5 / Math.sqrt(c.mass/10));
+      let spd = Math.max(0.6, 3 / Math.sqrt(c.mass/10));
       let decay = Math.pow(c.mergeTimer > 80 ? 0.94 : 0.82, dt);
       c.vx = c.vx*decay + (dx/d)*spd*(1-decay);
       c.vy = c.vy*decay + (dy/d)*spd*(1-decay);
@@ -695,8 +1146,8 @@ function mergeCells(cells) {
 }
 
 function mergeTimerForMass(mass) {
-  // 질량 비례 타이머 — 최소 120, 최대 600
-  return Math.min(600, Math.max(120, 120 + mass * 0.8));
+  // 질량 비례 타이머 — 최소 240, 최대 900 (더 오래 유지)
+  return Math.min(1800, Math.max(480, 480 + mass * 2.4));
 }
 
 // ── Split ─────────────────────────────────────────────
@@ -709,9 +1160,9 @@ function splitCells(cells, tx, ty) {
     let d = Math.hypot(dx,dy)||1;
     let half = c.mass/2;
     c.mass = half; c.r = massToR(half);
-    c.vx = -(dx/d)*6; c.vy = -(dy/d)*6;
+    // 본체 밀림 제거
     let nc = new Cell(c.x, c.y, half, c.color, c.name);
-    nc.vx = (dx/d)*35; nc.vy = (dy/d)*35;
+    nc.vx = (dx/d)*18; nc.vy = (dy/d)*18;
     let mt = mergeTimerForMass(half);
     nc.mergeTimer = mt;
     c.mergeTimer = mt;
@@ -723,14 +1174,14 @@ function splitCells(cells, tx, ty) {
 // ── Eject mass (W key) ────────────────────────────────
 function ejectMass(cells, tx, ty, team=-1) {
   for (let c of cells) {
-    if (c.mass < 40) continue;
-    let ejectAmt = 14;
+    if (c.mass < 22) continue; // 최소 22 이상일 때 발사 (발사 후 최소 10 유지)
+    let ejectAmt = Math.min(12, c.mass - 10); // 최대 12, 최소 10 남김
     let dx=tx-c.x, dy=ty-c.y, d=Math.hypot(dx,dy)||1;
     c.mass -= ejectAmt; c.r = massToR(c.mass);
     ejectedMass.push({
       x: c.x+(dx/d)*(c.r+14), y: c.y+(dy/d)*(c.r+14),
       vx: (dx/d)*14, vy: (dy/d)*14,
-      r: 16, mass: ejectAmt, color: c.color, life: Infinity, team
+      r: 14, mass: ejectAmt, color: c.color, life: Infinity, team
     });
   }
 }
@@ -753,6 +1204,7 @@ function eatFood(cells, isPlayer=false) {
       }
     }
   }
+  // 싱글모드만 로컬 보충
   if (foods.length < FOOD_COUNT) spawnFood(Math.min(5, FOOD_COUNT - foods.length));
 }
 
@@ -783,34 +1235,29 @@ function virusCheck(cells) {
       if (c.mass < rToMass(v.r) * 1.1) continue;
       if (dist(c, v) < c.r + v.r * 0.3) {
         let virusIdx = viruses.indexOf(v);
-        // 질량 흡수는 항상 (MAX_CELLS 상관없이)
         c.mass += rToMass(v.r);
         c.r = massToR(c.mass);
         viruses.splice(virusIdx, 1);
-        setTimeout(() => spawnVirus(), 10000);
+
+        if (viruses.length < VIRUS_COUNT) {
+          setTimeout(() => spawnVirus(), 10000 + Math.random() * 5000);
+        }
         if (cells === player) sfx.virusHit();
 
-        // 분열은 MAX_CELLS 여유 있을 때만
         let maxNew = MAX_CELLS - cells.length;
         if (maxNew > 0) {
-          // 떼어낼 조각 수 계산 (최대 남은 슬롯만큼)
           let pieces = Math.min(maxNew, Math.floor(c.mass / MIN_CELL_MASS) - 1);
           pieces = Math.max(1, pieces);
-
-          // 조각 크기 = MIN_CELL_MASS, 큰 거 = 나머지
           let chunkMass = MIN_CELL_MASS;
           let bigMass = c.mass - chunkMass * pieces;
-
-          // 큰 거 하나 남기기
+          let angleStart = Math.random() * Math.PI * 2;
           c.mass = bigMass;
           c.r = massToR(bigMass);
           c.mergeTimer = mergeTimerForMass(bigMass);
-
-          // 작은 조각들 사방으로 튕겨 나옴
-          let angleStart = Math.random() * Math.PI * 2;
+          // 본체는 그 자리 유지, 조각들만 사방으로 튕겨나감
           for (let p = 0; p < pieces; p++) {
             let angle = angleStart + (p / pieces) * Math.PI * 2;
-            let nc = new Cell(c.x, c.y, chunkMass, c.color, c.name);
+            let nc = new Cell(c.x, c.y, chunkMass, c.color, c.name, c.nameColor);
             nc.vx = Math.cos(angle) * 20;
             nc.vy = Math.sin(angle) * 20;
             nc.mergeTimer = mergeTimerForMass(chunkMass);
@@ -1295,7 +1742,7 @@ function updatePlayer() {
 
     let dx=tx-c.x, dy=ty-c.y;
     let d=Math.hypot(dx,dy)||1;
-    let spd = Math.max(1, 5/Math.sqrt(c.mass/10));
+    let spd = Math.max(0.6, 3/Math.sqrt(c.mass/10));
     let decay = Math.pow(c.mergeTimer > 80 ? 0.94 : 0.8, dt);
     if (d > c.r*0.5) {
       c.vx = c.vx*decay + (dx/d)*spd*(1-decay);
@@ -1322,10 +1769,7 @@ function updatePlayer() {
     }
   }
   mergeCells(player);
-  eatFood(player, true);
-  eatEjected(player, playerTeam);
-  virusCheck(player);
-  applyDecay(player);
+  // eatFood, eatEjected, virusCheck, applyDecay는 frame%2 블록에서 처리
 }
 
 // ── Ejected mass update ───────────────────────────────
@@ -1359,14 +1803,17 @@ function updateEjected() {
 
         v.r += VIRUS_FEED_GROW;
         v.fed = (v.fed || 0) + 1;
+        // 진행방향으로 아주 조금 밀림
+        v.x += dirX * 3; v.y += dirY * 3;
+        v.x = Math.max(v.r, Math.min(WORLD-v.r, v.x));
+        v.y = Math.max(v.r, Math.min(WORLD-v.r, v.y));
         ejectedMass.splice(ei, 1);
 
         if (v.fed >= VIRUS_SPLIT_AT || v.r >= VIRUS_MAX_R) {
-          // 분열 — 진행방향으로 새 바이러스 발사
           let newV = {
             x: v.x, y: v.y,
             r: VIRUS_BASE_R, fed: 0, spikes: 12, color: '#2ed573',
-            vx: dirX * 15, vy: dirY * 15, moveLife: 60
+            vx: dirX * 25, vy: dirY * 25, moveLife: 120
           };
           viruses.push(newV);
           v.r = VIRUS_BASE_R;
@@ -1406,17 +1853,28 @@ function loop(timestamp) {
 
   canvas.width=window.innerWidth; canvas.height=window.innerHeight;
 
-  // Update
+  // Update — 싱글/멀티 모두 로컬 물리
   applyJoystick();
   for (let b of bots) b.update();
   updatePlayer();
   updateEjected();
-  if (keys['KeyW'] && gameRunning && player && frame % 4 === 0) {
+
+  // W키 먹이 발사
+  if (keys['KeyW'] && gameRunning && player && frame % 8 === 0) {
     let wm = screenToWorld(mouse.x, mouse.y);
     ejectMass(player, wm.x, wm.y, playerTeam);
     sfx.eject();
   }
-  if (frame%2===0) botInteractions();
+
+  // 매 2프레임: 먹이/가시/감쇠 처리
+  if (frame % 2 === 0) {
+    eatFood(player, true);
+    eatEjected(player, playerTeam);
+    virusCheck(player);
+    applyDecay(player);
+    botInteractions();
+  }
+
   updateCamera();
 
   // Draw
@@ -1427,7 +1885,8 @@ function loop(timestamp) {
 
   for (let f of foods) drawFood(f);
   for (let v of viruses) drawVirus(v);
-  for (let e of ejectedMass) {
+  const renderEjected = ejectedMass;
+  for (let e of renderEjected) {
     let s=worldToScreen(e.x,e.y);
     let sr=Math.max(1, e.r*camera.zoom);
     ctx.save();
@@ -1439,7 +1898,9 @@ function loop(timestamp) {
     ctx.fill(); ctx.stroke();
     ctx.restore();
   }
+  // 봇 (싱글모드)
   for (let b of bots) { if (!b.dead) for (let c of b.cells) drawCell(c); }
+  // 내 세포
   if (player) for (let c of player) drawCell(c);
 
   // Cursor (데스크탑만)
@@ -1487,7 +1948,7 @@ function startGame(mode='solo') {
   gameRunning = true;
   lastTimestamp = 0;
   dt = 1;
-  document.getElementById('menu').style.display = 'none';
+  document.getElementById('lobby').style.display = 'none';
   document.getElementById('result').style.display = 'none';
   sfx.start();
   document.getElementById('settings-btn').style.display = 'flex';
@@ -1527,6 +1988,7 @@ function setBgmVolume(val) {
 function goToMenu() {
   gameRunning = false;
   clearInterval(matchInterval);
+
   document.getElementById('settings-panel').style.display = 'none';
   document.getElementById('settings-btn').style.display = 'none';
   document.getElementById('myinfo').style.display = 'none';
@@ -1539,8 +2001,15 @@ let keys = {};
 document.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
 document.addEventListener('keydown', e=>{
   keys[e.code] = true;
-  if (!gameRunning||!player) return;
-  if (e.code==='Space') { e.preventDefault(); let wm=screenToWorld(mouse.x,mouse.y); splitCells(player,wm.x,wm.y); sfx.split(); }
+  if (!gameRunning) return;
+  if (e.code==='Space') {
+    e.preventDefault();
+    if (player) {
+      let wm=screenToWorld(mouse.x,mouse.y);
+      splitCells(player,wm.x,wm.y);
+      sfx.split();
+    }
+  }
 });
 document.addEventListener('keyup', e=>{ keys[e.code] = false; });
 
@@ -1633,16 +2102,87 @@ document.getElementById('btn-eject').addEventListener('touchend', e => {
 // 스크롤 / 핀치줌 방지
 document.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
 
-document.getElementById('play-btn').addEventListener('click', ()=>startGame('solo'));
-document.getElementById('team-btn').addEventListener('click', ()=>startGame('team'));
-document.getElementById('name-input').addEventListener('keydown', e=>{ if(e.key==='Enter') startGame(); });
-document.getElementById('result-btn').addEventListener('click', ()=>{
-  document.getElementById('result').style.display='none';
-  document.getElementById('menu').style.display='flex';
-});
-
 window.addEventListener('resize', ()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
 canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+
+// ── eatFood에서 멀티일 때 서버에 보고 ─────────────────
+// (eatFood 함수 내부에서 pendingFoodEat에 push됨)
+
+// ── virusCheck에서 멀티일 때 서버에 보고 ──────────────
+// (virusCheck 함수 내부에서 pendingVirusEat에 push됨)
+
+// ── goToMenu 정리 ──────────────────────────────────────
+function goToMenu() {
+  gameRunning = false;
+  clearInterval(matchInterval);
+
+  document.getElementById('settings-panel').style.display = 'none';
+  document.getElementById('settings-btn').style.display   = 'none';
+  document.getElementById('myinfo').style.display         = 'none';
+  document.getElementById('leaderboard').style.display    = 'none';
+  document.getElementById('timer').style.display          = 'none';
+  document.getElementById('mobile-controls').style.display = 'none';
+  const ti = document.getElementById('team-indicator');
+  if (ti) ti.style.display = 'none';
+  document.getElementById('lobby').style.display = 'flex';
+  drawLobbyCell();
+  switchTab('game');
+}
+
+
+// ── 버튼 이벤트 ───────────────────────────────────────
+document.getElementById('play-btn')?.addEventListener('click', () => startGame('solo'));
+document.getElementById('team-btn')?.addEventListener('click', () => startGame('team'));
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame('solo');
+});
+document.getElementById('result-btn').addEventListener('click', () => {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('lobby').style.display = 'flex';
+});
+document.getElementById('result-lobby-btn')?.addEventListener('click', () => {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('lobby').style.display = 'flex';
+});
+
+// ── 로비 게임 버튼 ──
+document.getElementById('btn-solo').addEventListener('click', () => startGame('solo'));
+document.getElementById('btn-team').addEventListener('click', () => startGame('team'));
+
+// ── 탭 전환 ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+}
+
+// ── 로비 셀 프리뷰 ──
+function drawLobbyCell() {
+  const cv = document.getElementById('lobby-cell-canvas');
+  if (!cv) return;
+  const lc = cv.getContext('2d');
+  const parsed = parseName(document.getElementById('name-input')?.value || '');
+  const color = parsed.color || '#2ed573';
+  lc.clearRect(0, 0, 64, 64);
+  const grad = lc.createRadialGradient(22, 20, 4, 32, 32, 32);
+  grad.addColorStop(0, shadeColor(color, 60));
+  grad.addColorStop(1, color);
+  lc.fillStyle = grad;
+  lc.beginPath(); lc.arc(32, 32, 30, 0, Math.PI*2); lc.fill();
+  const name = (parsed.name || 'P').slice(0, 2);
+  lc.fillStyle = 'rgba(255,255,255,0.9)';
+  lc.font = 'bold 18px Segoe UI';
+  lc.textAlign = 'center'; lc.textBaseline = 'middle';
+  lc.fillText(name, 32, 32);
+}
+document.getElementById('name-input').addEventListener('input', () => {
+  const parsed = parseName(document.getElementById('name-input').value);
+  document.getElementById('profile-name-text').textContent = parsed.name || 'Player';
+  document.getElementById('member-display-name').textContent = parsed.name || 'Player';
+  drawLobbyCell();
+});
+drawLobbyCell();
 </script>
 </body>
 </html>
